@@ -49,7 +49,7 @@ export class EventsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleEnum.organizer, RoleEnum.admin)
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(
@@ -60,7 +60,7 @@ export class EventsController {
   }
 
   @ApiOkResponse({ type: InfinityPaginationResponse(Event) })
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Get()
   @HttpCode(HttpStatus.OK)
   findAll(
@@ -72,7 +72,7 @@ export class EventsController {
   @ApiOkResponse({ type: InfinityPaginationResponse(Event) })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Get('my')
   @HttpCode(HttpStatus.OK)
   findMine(
@@ -85,7 +85,7 @@ export class EventsController {
   }
 
   @ApiOkResponse({ type: Event })
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })
@@ -97,7 +97,7 @@ export class EventsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleEnum.organizer, RoleEnum.admin)
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })
@@ -114,7 +114,7 @@ export class EventsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleEnum.organizer, RoleEnum.admin)
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })

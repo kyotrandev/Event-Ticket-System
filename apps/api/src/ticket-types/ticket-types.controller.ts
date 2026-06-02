@@ -39,7 +39,7 @@ export class TicketTypesController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleEnum.organizer, RoleEnum.admin)
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Post('events/:eventId/ticket-types')
   @HttpCode(HttpStatus.CREATED)
   @ApiParam({ name: 'eventId', type: String, required: true })
@@ -52,7 +52,7 @@ export class TicketTypesController {
   }
 
   @ApiOkResponse({ type: [TicketType] })
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Get('events/:eventId/ticket-types')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'eventId', type: String, required: true })
@@ -61,7 +61,7 @@ export class TicketTypesController {
   }
 
   @ApiOkResponse({ type: TicketType })
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Get('ticket-types/:id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })
@@ -73,7 +73,7 @@ export class TicketTypesController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleEnum.organizer, RoleEnum.admin)
-  @SerializeOptions({ strategy: 'excludeAll' })
+  @SerializeOptions({ groups: [] })
   @Patch('ticket-types/:id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })
