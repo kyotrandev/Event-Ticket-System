@@ -102,3 +102,54 @@ export interface EventQuery {
   dateTo?: string;
   location?: string;
 }
+
+export interface BookingItem {
+  id: string;
+  bookingId: string;
+  ticketTypeId: string;
+  ticketType?: TicketType;
+  quantity: number;
+  unitPrice: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookingStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'expired'
+  | 'failed'
+  | 'refunded';
+
+export interface Booking {
+  id: string;
+  customerId: string;
+  status: BookingStatus;
+  expiresAt: string;
+  promoCodeId: string | null;
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  items?: BookingItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateIntentResponse {
+  clientSecret: string | null;
+  paymentId: string;
+  status: 'requires_payment' | 'paid';
+}
+
+export type TicketStatus = 'issued' | 'used' | 'cancelled';
+
+export interface Ticket {
+  id: string;
+  bookingItemId: string;
+  eventId: string;
+  customerId: string;
+  code: string;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
