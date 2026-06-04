@@ -12,6 +12,7 @@ import {
   HttpCode,
   SerializeOptions,
   Request,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -36,6 +37,9 @@ import {
   InfinityPaginationResponseDto,
 } from '../utils/dto/infinity-pagination-response.dto';
 import { NullableType } from '../utils/types/nullable.type';
+import { EventStaffAssignmentsService } from '../event-staff-assignments/event-staff-assignments.service';
+import { AssignStaffDto } from '../event-staff-assignments/dto/assign-staff.dto';
+import { EventStaffAssignment } from '../event-staff-assignments/domain/event-staff-assignment';
 
 @ApiTags('Events')
 @Controller({
@@ -43,7 +47,10 @@ import { NullableType } from '../utils/types/nullable.type';
   version: '1',
 })
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly staffService: EventStaffAssignmentsService,
+  ) {}
 
   @ApiCreatedResponse({ type: Event })
   @ApiBearerAuth()
@@ -144,5 +151,59 @@ export class EventsController {
   ): Promise<void> {
     const isAdmin = req.user.role?.id === RoleEnum.admin;
     return this.eventsService.remove(id, String(req.user.id), isAdmin);
+  }
+
+  // --- Staff management ---
+
+  @ApiCreatedResponse({ type: EventStaffAssignment })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(RoleEnum.organizer, RoleEnum.admin)
+  @Post(':id/staff')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'id', type: String, required: true })
+  assignStaff(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Body() dto: AssignStaffDto,
+    @Request() req: { user: JwtPayloadType },
+  ): Promise<EventStaffAssignment> {
+    const isAdmin = req.user.role?.id === RoleEnum.admin;
+    return this.staffService.assign(
+      eventId,
+      dto.staffId,
+      String(req.user.id),
+      isAdmin,
+    );
+  }
+
+  @ApiOkResponse({ type: [EventStaffAssignment] })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(RoleEnum.organizer, RoleEnum.admin)
+  @Get(':id/staff')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: String, required: true })
+  listStaff(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Request() req: { user: JwtPayloadType },
+  ): Promise<object[]> {
+    const isAdmin = req.user.role?.id === RoleEnum.admin;
+    return this.staffService.listByEvent(eventId, String(req.user.id), isAdmin);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(RoleEnum.organizer, RoleEnum.admin)
+  @Delete(':id/staff/:staffId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiParam({ name: 'id', type: String, required: true })
+  @ApiParam({ name: 'staffId', type: String, required: true })
+  removeStaff(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Param('staffId') staffId: string,
+    @Request() req: { user: JwtPayloadType },
+  ): Promise<void> {
+    const isAdmin = req.user.role?.id === RoleEnum.admin;
+    return this.staffService.remove(eventId, staffId, String(req.user.id), isAdmin);
   }
 }
