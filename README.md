@@ -122,4 +122,4 @@ event-ticket-system/
 
 ## Team
 
-HCMUS — CNPM Project, HK2 2025–2026.
+KMA — CNPM Project, HK2 2025–2026.
