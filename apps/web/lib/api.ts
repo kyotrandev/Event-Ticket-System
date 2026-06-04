@@ -173,6 +173,9 @@ import type {
   Booking,
   CreateIntentResponse,
   Ticket,
+  EventStaffAssignment,
+  CheckInResult,
+  CheckInLogEntry,
 } from './types';
 
 export const bookingApi = {
@@ -199,4 +202,24 @@ export const ticketApi = {
     const blob = await res.blob();
     return URL.createObjectURL(blob);
   },
+};
+
+// --- Staff management endpoints ---
+export const staffApi = {
+  list: (eventId: string) =>
+    api.get<EventStaffAssignment[]>(`/events/${eventId}/staff`),
+  assign: (eventId: string, staffId: string) =>
+    api.post<EventStaffAssignment>(`/events/${eventId}/staff`, { staffId }),
+  remove: (eventId: string, staffId: string) =>
+    api.delete<void>(`/events/${eventId}/staff/${staffId}`),
+};
+
+// --- Check-in endpoints ---
+export const checkInApi = {
+  scan: (code: string, eventId: string, s: string) =>
+    api.post<CheckInResult>('/checkin/scan', { code, eventId, s }),
+  manual: (code: string, eventId: string) =>
+    api.post<CheckInResult>('/checkin/manual', { code, eventId }),
+  getLogs: (eventId: string) =>
+    api.get<CheckInLogEntry[]>(`/checkin/logs/${eventId}`),
 };

@@ -153,3 +153,37 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
 }
+
+// Phase 4 — Check-In
+
+export interface EventStaffAssignment {
+  id: string;
+  eventId: string;
+  staffId: string;
+  assignedAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}
+
+export type CheckInStatus = 'VALID' | 'ALREADY_USED' | 'INVALID' | 'NOT_FOUND';
+
+export interface CheckInResult {
+  status: CheckInStatus;
+  attendeeName?: string;
+  ticketTypeName?: string;
+  ticketCode?: string;
+  originalScannedAt?: string;
+  staffName?: string;
+}
+
+export type CheckInMethod = 'qr' | 'manual';
+
+export interface CheckInLogEntry {
+  ticketCode: string;
+  attendeeName: string;
+  ticketTypeName: string;
+  scannedAt: string;
+  method: CheckInMethod;
+  staffName: string;
+}
