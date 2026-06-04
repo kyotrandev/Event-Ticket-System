@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useCallback, useEffect, useRef, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -33,24 +33,19 @@ function formatVnd(amount: number): string {
       );
 }
 
+// Module-level stable refs — no useCallback needed, no closure over component state.
+function subscribeToTimer(cb: () => void) {
+  const id = setInterval(cb, 1000);
+  return () => clearInterval(id);
+}
+function getTimerSnapshot() {
+  return Date.now();
+}
+
 function useCountdown(expiresAt: string | null) {
-  const [seconds, setSeconds] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!expiresAt) return;
-    const tick = () => {
-      const diff = Math.max(
-        0,
-        Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000),
-      );
-      setSeconds(diff);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [expiresAt]);
-
-  return seconds;
+  const now = useSyncExternalStore(subscribeToTimer, getTimerSnapshot, () => 0);
+  if (!expiresAt) return null;
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 1000));
 }
 
 function PaymentForm({
@@ -141,6 +136,7 @@ export default function PayPage({
   }, [id, router]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 

@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { bookingApi } from '@/lib/api';
 import type { Booking } from '@/lib/types';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 
 export default function SuccessPage({
   params,
