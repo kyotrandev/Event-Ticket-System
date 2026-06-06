@@ -4,12 +4,15 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Logger,
   Param,
   Post,
   RawBodyRequest,
   Req,
   Request,
   UseGuards,
+  Version,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,6 +31,8 @@ import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
   version: '1',
 })
 export class PaymentsController {
+  private readonly logger = new Logger(PaymentsController.name);
+
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('intent/:bookingId')
@@ -46,16 +51,31 @@ export class PaymentsController {
   /**
    * Stripe webhook (public; authenticated by signature). Reads the raw
    * request body — JSON re-serialization would break the signature.
+   *
+   * VERSION_NEUTRAL: webhooks must be reachable at /api/payments/webhook
+   * (the URL shown in NestJS startup logs and documented for stripe listen).
+   * URI versioning adds /v1/ after the startup log is emitted, making the
+   * versioned path /api/v1/payments/webhook — a URL operators would not know
+   * to use. VERSION_NEUTRAL makes both paths resolve to this handler.
    */
   @Post('webhook')
+  @Version(VERSION_NEUTRAL)
   @HttpCode(HttpStatus.OK)
   async webhook(
     @Req() req: RawBodyRequest<ExpressRequest>,
     @Headers('stripe-signature') signature?: string,
   ): Promise<{ received: boolean }> {
+    this.logger.log(
+      `webhook received: sig=${signature ? signature.slice(0, 20) + '…' : 'MISSING'} rawBody=${req.rawBody ? req.rawBody.length + 'B' : 'MISSING'}`,
+    );
+
     if (!signature || !req.rawBody) {
+      this.logger.error(
+        `webhook rejected: missing ${!signature ? 'stripe-signature header' : 'raw body'}`,
+      );
       throw new BadRequestException('Missing stripe-signature or raw body');
     }
+
     await this.paymentsService.handleWebhook(req.rawBody, signature);
     return { received: true };
   }
