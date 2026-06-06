@@ -291,6 +291,8 @@ WAITING ──(ticket available)──► NOTIFIED ──(user books within 48h)
 
 ## 5. Phase 2 — Event & Ticket Type Management
 
+> **Status: ✅ Implemented** — event CRUD (create/publish/cancel), ticket type management, public event browse/search/detail. Frontend: event listing, event detail page, organizer event management.
+
 ### User Stories
 
 ---
@@ -383,7 +385,7 @@ WAITING ──(ticket available)──► NOTIFIED ──(user books within 48h)
 
 ## 6. Phase 3 — Booking & Payment
 
-> **Status: ✅ Implemented (backend)** (commit `feat(api): implement Phase 3`)
+> **Status: ✅ Implemented** (commit `feat(api): implement Phase 3` + `feat(web): implement Phase 3 booking & payment UI`)
 
 ### Implementation Notes
 
@@ -487,6 +489,8 @@ WAITING ──(ticket available)──► NOTIFIED ──(user books within 48h)
 ---
 
 ## 7. Phase 4 — Check-In System
+
+> **Status: ✅ Implemented** (commit `feat(check-in): implement Phase 4 QR check-in system`) — HMAC-SHA256 QR codes, staff scan endpoint, status transitions (issued→used), rate-limited 60 req/min/staffId.
 
 ### User Stories
 
@@ -624,7 +628,7 @@ WAITING ──(ticket available)──► NOTIFIED ──(user books within 48h)
 
 ## 9. Phase 6 — Analytics & Admin Panel
 
-> **✅ Implemented (backend)** — `GET /api/v1/events/:id/analytics` (organizer+admin, ownership-checked), `GET /api/v1/admin/stats`, `GET /api/v1/admin/organizers/pending`. US-6.3 promo CRUD was already done in Phase 3. Revenue uses PAID+REFUNDED signed sum; check-in rate denominator = ISSUED+USED tickets (excludes CANCELLED). Implemented in `src/analytics/` + `src/admin/`.
+> **Status: ✅ Implemented** — backend (`src/analytics/`, `src/admin/`) + frontend (`/admin/stats`, `/admin/users`, `/admin/organizers/pending`, `/admin/promo-codes`, `/organizer/events`, `/organizer/events/[id]/analytics`). Revenue uses item-level signed sum (PAID positive, REFUNDED negative); check-in rate denominator = ISSUED+USED (excludes CANCELLED). US-6.3 promo CRUD already done in Phase 3.
 
 ### User Stories
 
