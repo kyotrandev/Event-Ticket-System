@@ -152,6 +152,9 @@ export class PaymentsService {
       infer: true,
     });
     if (!webhookSecret) {
+      this.logger.error(
+        'STRIPE_WEBHOOK_SECRET is not set — cannot verify webhook',
+      );
       throw new UnprocessableEntityException(
         'Stripe webhook is not configured',
       );
@@ -164,13 +167,21 @@ export class PaymentsService {
         signature,
         webhookSecret,
       );
-    } catch {
+    } catch (err) {
+      this.logger.error(
+        `webhook signature verification failed: ${String(err)}`,
+      );
       throw new BadRequestException('Invalid webhook signature');
     }
+
+    this.logger.log(`webhook event: type=${event.type} id=${event.id}`);
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const intent = event.data.object as unknown as PaymentIntentLike;
+        this.logger.log(
+          `payment_intent.succeeded: pi=${intent.id} bookingId=${intent.metadata?.bookingId ?? 'MISSING'} amount=${intent.amount}`,
+        );
         await this.fulfill(intent.id, {
           bookingId: intent.metadata?.bookingId,
           amount: intent.amount,
@@ -179,6 +190,7 @@ export class PaymentsService {
       }
       case 'payment_intent.payment_failed': {
         const intent = event.data.object as unknown as PaymentIntentLike;
+        this.logger.log(`payment_intent.payment_failed: pi=${intent.id}`);
         await this.markFailed(intent.id);
         break;
       }
@@ -188,6 +200,9 @@ export class PaymentsService {
           payment_intent: string;
           status: string;
         };
+        this.logger.log(
+          `charge.refund.updated: refundId=${refund.id} pi=${refund.payment_intent} status=${refund.status}`,
+        );
         if (refund.status === 'succeeded') {
           await this.recordRefund(refund.payment_intent, refund.id);
         }
@@ -210,6 +225,10 @@ export class PaymentsService {
     stripePaymentIntentId: string,
     fallback: { bookingId?: string; amount?: number },
   ): Promise<string> {
+    this.logger.log(
+      `fulfill: enter pi=${stripePaymentIntentId} bookingId=${fallback.bookingId ?? 'from-payment-row'}`,
+    );
+
     const result = await this.dataSource.transaction(async (manager) => {
       // Lock (or create) the payment row — this is the idempotency gate.
       let payment = await manager
@@ -217,6 +236,10 @@ export class PaymentsService {
         .setLock('pessimistic_write')
         .where('p.stripePaymentIntentId = :pi', { pi: stripePaymentIntentId })
         .getOne();
+
+      this.logger.log(
+        `fulfill: payment lookup pi=${stripePaymentIntentId} found=${!!payment} status=${payment?.status ?? 'N/A'}`,
+      );
 
       // Terminal states: payment was already processed (succeeded or refunded).
       // SUCCEEDED covers normal duplicate webhook; REFUNDED covers the case
@@ -227,11 +250,17 @@ export class PaymentsService {
         payment?.status === PaymentStatusEnum.SUCCEEDED ||
         payment?.status === PaymentStatusEnum.REFUNDED
       ) {
+        this.logger.log(
+          `fulfill: idempotency gate — already ${payment.status}, skip`,
+        );
         return { paymentId: payment.id, fulfilled: false };
       }
 
       if (!payment) {
         if (!fallback.bookingId) {
+          this.logger.error(
+            `fulfill: no payment row and no bookingId in metadata for pi=${stripePaymentIntentId}`,
+          );
           throw new NotFoundException(
             `No payment for intent ${stripePaymentIntentId}`,
           );
@@ -252,8 +281,15 @@ export class PaymentsService {
         .where('b.id = :id', { id: payment.bookingId })
         .getOne();
       if (!booking) {
+        this.logger.error(
+          `fulfill: booking not found for payment.bookingId=${payment.bookingId}`,
+        );
         throw new NotFoundException('Booking not found for payment');
       }
+
+      this.logger.log(
+        `fulfill: booking=${booking.id} status=${booking.status}`,
+      );
 
       if (booking.status !== BookingStatusEnum.PENDING_PAYMENT) {
         // Payment landed after expiry released the hold.
@@ -336,6 +372,9 @@ export class PaymentsService {
         });
       }
 
+      this.logger.log(
+        `fulfill: transitioning booking=${booking.id} PENDING_PAYMENT → PAID`,
+      );
       booking.status = BookingStatusEnum.PAID;
       await manager.save(booking);
 
@@ -343,6 +382,7 @@ export class PaymentsService {
       await manager.save(payment);
 
       await this.ticketsService.issueForBooking(booking, manager);
+      this.logger.log(`fulfill: tickets issued for booking=${booking.id}`);
 
       // Promo usage is consumed here (payment success), not at booking
       // creation — expired bookings never burn uses (see PromoCodesService).
@@ -378,6 +418,10 @@ export class PaymentsService {
       return { paymentId: payment.id, fulfilled: true };
     });
 
+    this.logger.log(
+      `fulfill: transaction done pi=${stripePaymentIntentId} fulfilled=${result.fulfilled}`,
+    );
+
     if (result.fulfilled) {
       const payment = await this.dataSource
         .getRepository(PaymentEntity)
@@ -391,6 +435,9 @@ export class PaymentsService {
           backoff: { type: 'exponential', delay: 10000 },
           removeOnComplete: true,
         },
+      );
+      this.logger.log(
+        `fulfill: ticket delivery queued for booking=${payment.bookingId}`,
       );
     }
 
