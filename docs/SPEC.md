@@ -692,6 +692,8 @@ WAITING ──(ticket available)──► NOTIFIED ──(user books within 48h)
 
 ## 10. Phase 7 — Infrastructure & DevOps
 
+> **Status: ✅ Implemented** — `docker-compose.yml` at repo root (all 4 services), `.env.example` for both `apps/api/` and `apps/web/`, CI workflow (`lint-test.yml`) and CD workflow (`deploy.yml`) in `.github/workflows/`. US-7.4: no secrets baked into images; all config via env vars.
+
 ### User Stories
 
 ---
