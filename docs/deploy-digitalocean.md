@@ -131,12 +131,26 @@ services:
     depends_on:
       - api
 
+  dozzle:
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:9999:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_USERNAME: ${DOZZLE_USERNAME}
+      DOZZLE_PASSWORD: ${DOZZLE_PASSWORD}
+
 volumes:
   event-ticket-db:
 EOF
 ```
 
 > Thay `<YOUR_GITHUB_USERNAME>/<YOUR_REPO_NAME>` = lowercase repo path, ví dụ: `kyotranma/event-ticket-system`
+>
+> **Dozzle port bind `127.0.0.1:9999`** — chỉ nghe localhost, Nginx mới proxy ra ngoài. Không expose thẳng lên internet.
 
 ### 3b. Tạo `api.env`
 ```bash
@@ -203,6 +217,18 @@ EOF
 chmod 600 /opt/event-ticket-system/web.env
 ```
 
+### 3d. Tạo `.env` cho Dozzle credentials
+
+```bash
+cat > /opt/event-ticket-system/.env << 'EOF'
+DOZZLE_USERNAME=CHANGE_ME_USERNAME
+DOZZLE_PASSWORD=CHANGE_ME_STRONG_PASSWORD
+EOF
+chmod 600 /opt/event-ticket-system/.env
+```
+
+> Docker Compose tự load `.env` trong cùng thư mục — `${DOZZLE_USERNAME}` và `${DOZZLE_PASSWORD}` resolve từ đây.
+
 ---
 
 ## 4. Cấu hình Nginx reverse proxy
@@ -252,18 +278,48 @@ server {
 EOF
 ```
 
-### 4c. Enable + SSL
+### 4c. Config Dozzle subdomain (logs)
+
+```bash
+cat > /etc/nginx/sites-available/logs.yourdomain.com << 'EOF'
+server {
+    listen 80;
+    server_name logs.yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:9999;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+    }
+}
+EOF
+```
+
+> `proxy_buffering off` + `proxy_read_timeout 300s` — cần thiết cho SSE stream (Dozzle dùng Server-Sent Events để stream log real-time).
+
+### 4d. Enable + SSL
+
 ```bash
 ln -s /etc/nginx/sites-available/api.yourdomain.com /etc/nginx/sites-enabled/
 ln -s /etc/nginx/sites-available/yourdomain.com /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/logs.yourdomain.com /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 
 # SSL (trỏ DNS trước khi chạy)
 certbot --nginx -d yourdomain.com -d www.yourdomain.com
 certbot --nginx -d api.yourdomain.com
+certbot --nginx -d logs.yourdomain.com
 ```
 
-> **DNS**: Trỏ A record `yourdomain.com` và `api.yourdomain.com` → VPS IP trước bước này.
+> **DNS**: Trỏ A record `yourdomain.com`, `api.yourdomain.com`, và `logs.yourdomain.com` → VPS IP trước bước này.
 
 ---
 
