@@ -41,6 +41,7 @@ services:
       DATABASE_PORT: 5432
       REDIS_HOST: redis
       WORKER_HOST: redis://redis:6379/1
+      MAIL_HOST: maildev
     ports:
       - "4000:4000"
     depends_on:
@@ -53,6 +54,10 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_51TfwDRPunHsEJTE4lGKVDYxIBNLcWvMTWIT9KqDdnCBCBIxrF7wbeZbFfZfkv5Jig0XFfWKUV5GwW0vrMaBRsgZU00lmqfjonN
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: 919440517802-ci5lhecfm795rs71cv33brht2c6lchlr.apps.googleusercontent.com
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
     ports:
