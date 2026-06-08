@@ -40,6 +40,8 @@ import { NullableType } from '../utils/types/nullable.type';
 import { EventStaffAssignmentsService } from '../event-staff-assignments/event-staff-assignments.service';
 import { AssignStaffDto } from '../event-staff-assignments/dto/assign-staff.dto';
 import { EventStaffAssignment } from '../event-staff-assignments/domain/event-staff-assignment';
+import { InviteStaffDto } from '../event-staff-assignments/dto/invite-staff.dto';
+import { UpdateStaffDto } from '../event-staff-assignments/dto/update-staff.dto';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EventAnalyticsDto } from '../analytics/dto/event-analytics.dto';
 
@@ -198,6 +200,29 @@ export class EventsController {
     );
   }
 
+  @ApiCreatedResponse({ type: EventStaffAssignment })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(RoleEnum.organizer, RoleEnum.admin)
+  @Post(':id/staff/invite')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiParam({ name: 'id', type: String, required: true })
+  inviteStaff(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Body() dto: InviteStaffDto,
+    @Request() req: { user: JwtPayloadType },
+  ): Promise<EventStaffAssignment> {
+    const isAdmin = req.user.role?.id === RoleEnum.admin;
+    return this.staffService.inviteStaff(
+      eventId,
+      dto.email,
+      dto.firstName,
+      dto.lastName,
+      String(req.user.id),
+      isAdmin,
+    );
+  }
+
   @ApiOkResponse({ type: [EventStaffAssignment] })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -229,6 +254,31 @@ export class EventsController {
     return this.staffService.remove(
       eventId,
       staffId,
+      String(req.user.id),
+      isAdmin,
+    );
+  }
+
+  @ApiOkResponse({ type: EventStaffAssignment })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(RoleEnum.organizer, RoleEnum.admin)
+  @Patch(':id/staff/:staffId')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', type: String, required: true })
+  @ApiParam({ name: 'staffId', type: String, required: true })
+  updateStaff(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Param('staffId') staffId: string,
+    @Body() dto: UpdateStaffDto,
+    @Request() req: { user: JwtPayloadType },
+  ): Promise<any> {
+    const isAdmin = req.user.role?.id === RoleEnum.admin;
+    return this.staffService.updateStaff(
+      eventId,
+      staffId,
+      dto.firstName,
+      dto.lastName,
       String(req.user.id),
       isAdmin,
     );

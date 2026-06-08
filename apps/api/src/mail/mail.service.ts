@@ -18,7 +18,10 @@ export class MailService {
 
   async userSignUp(mailData: MailData<{ hash: string }>): Promise<void> {
     const i18nContext = I18nContext.current();
-    const lang = i18nContext?.lang || this.configService.get('app.fallbackLanguage', { infer: true }) || 'en';
+    const lang =
+      i18nContext?.lang ||
+      this.configService.get('app.fallbackLanguage', { infer: true }) ||
+      'en';
 
     const [emailConfirmTitle, text1, text2, text3] = await Promise.all([
       this.i18n.t('common.confirmEmail', { lang }),
@@ -289,6 +292,46 @@ export class MailService {
       context: {
         app_name: this.configService.get('app.name', { infer: true }),
         firstName: mailData.data.firstName,
+      },
+    });
+  }
+
+  async staffInvitation(
+    mailData: MailData<{
+      hash: string;
+      tokenExpires: number;
+      eventName: string;
+      organizerName: string;
+    }>,
+  ): Promise<void> {
+    const url = new URL(
+      this.configService.getOrThrow('app.frontendDomain', {
+        infer: true,
+      }) + '/password-change',
+    );
+    url.searchParams.set('hash', mailData.data.hash);
+    url.searchParams.set('expires', mailData.data.tokenExpires.toString());
+
+    await this.mailerService.sendMail({
+      to: mailData.to,
+      subject: `You've been invited as a Staff member for ${mailData.data.eventName}`,
+      text: `${url.toString()} Click here to set your password and accept the invitation.`,
+      templatePath: path.join(
+        this.configService.getOrThrow('app.workingDirectory', {
+          infer: true,
+        }),
+        'src',
+        'mail',
+        'mail-templates',
+        'staff-invitation.hbs',
+      ),
+      context: {
+        title: 'Staff Invitation',
+        url: url.toString(),
+        actionTitle: 'Set your password',
+        app_name: this.configService.get('app.name', { infer: true }),
+        eventName: mailData.data.eventName,
+        organizerName: mailData.data.organizerName,
       },
     });
   }

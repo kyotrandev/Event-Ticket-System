@@ -8,7 +8,8 @@
 
 import type { LoginResponse, User } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
 const TOKEN_KEY = 'ets.token';
 const REFRESH_KEY = 'ets.refreshToken';
@@ -18,7 +19,11 @@ export class ApiError extends Error {
   // Field-level validation errors from class-validator, when present.
   fields?: Record<string, string>;
 
-  constructor(status: number, message: string, fields?: Record<string, string>) {
+  constructor(
+    status: number,
+    message: string,
+    fields?: Record<string, string>,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -27,7 +32,8 @@ export class ApiError extends Error {
 }
 
 export const tokenStore = {
-  get: () => (typeof window === 'undefined' ? null : localStorage.getItem(TOKEN_KEY)),
+  get: () =>
+    typeof window === 'undefined' ? null : localStorage.getItem(TOKEN_KEY),
   getRefresh: () =>
     typeof window === 'undefined' ? null : localStorage.getItem(REFRESH_KEY),
   set: (token: string, refreshToken: string) => {
@@ -159,7 +165,8 @@ export const fileApi = {
     const formData = new FormData();
     formData.append('file', file);
     const token = tokenStore.get();
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+    const API_URL =
+      process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
     const res = await fetch(`${API_URL}/files/upload`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -188,8 +195,11 @@ export const authApi = {
     phoneNumber?: string;
   }) => api.post<void>('/auth/email/register', data, false),
   logout: () => api.post<void>('/auth/logout'),
-  updateProfile: (data: { firstName?: string; lastName?: string; photo?: { id: string; path: string } | null }) =>
-    api.patch<User>('/auth/me', data),
+  updateProfile: (data: {
+    firstName?: string;
+    lastName?: string;
+    photo?: { id: string; path: string } | null;
+  }) => api.patch<User>('/auth/me', data),
   forgotPassword: (email: string) =>
     api.post<void>('/auth/forgot/password', { email }, false),
   resetPassword: (hash: string, password: string) =>
@@ -208,8 +218,14 @@ import type {
 } from './types';
 
 export const bookingApi = {
-  create: (items: { ticketTypeId: string; quantity: number }[], promoCode?: string) =>
-    api.post<Booking>('/bookings', { items, ...(promoCode ? { promoCode } : {}) }),
+  create: (
+    items: { ticketTypeId: string; quantity: number }[],
+    promoCode?: string,
+  ) =>
+    api.post<Booking>('/bookings', {
+      items,
+      ...(promoCode ? { promoCode } : {}),
+    }),
   findMine: () => api.get<Booking[]>('/bookings/me'),
   findById: (id: string) => api.get<Booking>(`/bookings/${id}`),
   cancel: (id: string) => api.delete<void>(`/bookings/${id}`),
@@ -239,7 +255,10 @@ export const ticketTypeApi = {
   list: (eventId: string) =>
     api.get<import('./types').TicketType[]>(`/events/${eventId}/ticket-types`),
   create: (eventId: string, data: Partial<import('./types').TicketType>) =>
-    api.post<import('./types').TicketType>(`/events/${eventId}/ticket-types`, data),
+    api.post<import('./types').TicketType>(
+      `/events/${eventId}/ticket-types`,
+      data,
+    ),
   update: (id: string, data: Partial<import('./types').TicketType>) =>
     api.patch<import('./types').TicketType>(`/ticket-types/${id}`, data),
   delete: (id: string) => api.delete<void>(`/ticket-types/${id}`),
@@ -251,6 +270,21 @@ export const staffApi = {
     api.get<EventStaffAssignment[]>(`/events/${eventId}/staff`),
   assign: (eventId: string, staffId: string) =>
     api.post<EventStaffAssignment>(`/events/${eventId}/staff`, { staffId }),
+  invite: (
+    eventId: string,
+    data: { email: string; firstName?: string; lastName?: string },
+  ) => api.post<EventStaffAssignment>(`/events/${eventId}/staff/invite`, data),
+
+  update: (
+    eventId: string,
+    staffId: string,
+    data: { firstName?: string; lastName?: string },
+  ) =>
+    api.patch<EventStaffAssignment>(
+      `/events/${eventId}/staff/${staffId}`,
+      data,
+    ),
+
   remove: (eventId: string, staffId: string) =>
     api.delete<void>(`/events/${eventId}/staff/${staffId}`),
 };
@@ -270,7 +304,10 @@ export const adminApi = {
   getStats: () => api.get<AdminStats>('/admin/stats'),
 
   getUsers: (page = 1, limit = 20) =>
-    api.get<{ data: import('./types').User[]; hasNextPage: boolean }>('/users', { page, limit }),
+    api.get<{ data: import('./types').User[]; hasNextPage: boolean }>(
+      '/users',
+      { page, limit },
+    ),
 
   getPendingOrganizers: (page = 1, limit = 20) =>
     api.get<{ data: import('./types').User[]; hasNextPage: boolean }>(
@@ -291,7 +328,10 @@ export const adminApi = {
     api.post<import('./types').User>(`/users/${id}/unlock`),
 
   getPromoCodes: (page = 1, limit = 20) =>
-    api.get<{ data: PromoCode[]; hasNextPage: boolean }>('/promo-codes', { page, limit }),
+    api.get<{ data: PromoCode[]; hasNextPage: boolean }>('/promo-codes', {
+      page,
+      limit,
+    }),
 
   createPromoCode: (dto: {
     code: string;
@@ -303,8 +343,10 @@ export const adminApi = {
     isActive?: boolean;
   }) => api.post<PromoCode>('/promo-codes', dto),
 
-  updatePromoCode: (id: string, dto: Partial<{ isActive: boolean; maxUses: number }>) =>
-    api.patch<PromoCode>(`/promo-codes/${id}`, dto),
+  updatePromoCode: (
+    id: string,
+    dto: Partial<{ isActive: boolean; maxUses: number }>,
+  ) => api.patch<PromoCode>(`/promo-codes/${id}`, dto),
 
   deletePromoCode: (id: string) => api.delete<void>(`/promo-codes/${id}`),
 };
@@ -312,10 +354,13 @@ export const adminApi = {
 // --- Organizer endpoints ---
 export const organizerApi = {
   getEvents: (page = 1, limit = 20) =>
-    api.get<{ data: import('./types').EventModel[]; hasNextPage: boolean }>('/events/my', {
-      page,
-      limit,
-    }),
+    api.get<{ data: import('./types').EventModel[]; hasNextPage: boolean }>(
+      '/events/my',
+      {
+        page,
+        limit,
+      },
+    ),
 
   getAnalytics: (eventId: string) =>
     api.get<EventAnalytics>(`/events/${eventId}/analytics`),
@@ -323,7 +368,8 @@ export const organizerApi = {
   createEvent: (data: Partial<import('./types').EventModel>) =>
     api.post<import('./types').EventModel>('/events', data),
 
-  getEvent: (id: string) => api.get<import('./types').EventModel>(`/events/${id}`),
+  getEvent: (id: string) =>
+    api.get<import('./types').EventModel>(`/events/${id}`),
 
   updateEvent: (id: string, data: Partial<import('./types').EventModel>) =>
     api.patch<import('./types').EventModel>(`/events/${id}`, data),
@@ -332,6 +378,8 @@ export const organizerApi = {
     api.patch<import('./types').EventModel>(`/events/${id}/status`, { status }),
 
   deleteEvent: (id: string) => api.delete<void>(`/events/${id}`),
+
+  getStaffUsers: () => api.get<import('./types').User[]>('/users/staff/list'),
 };
 
 // --- Check-in endpoints ---

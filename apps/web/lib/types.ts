@@ -164,6 +164,7 @@ export interface EventStaffAssignment {
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
+  statusId?: number | null;
 }
 
 export type CheckInStatus = 'VALID' | 'ALREADY_USED' | 'INVALID' | 'NOT_FOUND';
@@ -218,9 +219,27 @@ export interface EventAnalytics {
 }
 
 export interface AdminStats {
-  users: { admin: number; customer: number; organizer: number; staff: number; total: number };
-  events: { draft: number; published: number; ongoing: number; ended: number; cancelled: number };
-  bookings: { pendingPayment: number; paid: number; expired: number; failed: number; refunded: number };
+  users: {
+    admin: number;
+    customer: number;
+    organizer: number;
+    staff: number;
+    total: number;
+  };
+  events: {
+    draft: number;
+    published: number;
+    ongoing: number;
+    ended: number;
+    cancelled: number;
+  };
+  bookings: {
+    pendingPayment: number;
+    paid: number;
+    expired: number;
+    failed: number;
+    refunded: number;
+  };
   totalGrossRevenue: number;
   totalRefunds: number;
 }

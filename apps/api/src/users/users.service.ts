@@ -419,4 +419,15 @@ export class UsersService {
     });
     return entities.map((e) => UserMapper.toDomain(e));
   }
+
+  async findStaffUsers(): Promise<User[]> {
+    const entities = await this.dataSource.getRepository(UserEntity).find({
+      where: {
+        role: { id: RoleEnum.staff },
+        status: { id: StatusEnum.active },
+      },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((e) => UserMapper.toDomain(e));
+  }
 }

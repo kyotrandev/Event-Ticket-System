@@ -195,4 +195,13 @@ export class UsersController {
   unlockUser(@Param('id') id: User['id']): Promise<User> {
     return this.usersService.unlockUser(id);
   }
+
+  @ApiOkResponse({ type: [User] })
+  @ApiOperation({ summary: 'List all active staff accounts' })
+  @Roles(RoleEnum.admin, RoleEnum.organizer)
+  @Get('staff/list')
+  @HttpCode(HttpStatus.OK)
+  findStaffUsers(): Promise<User[]> {
+    return this.usersService.findStaffUsers();
+  }
 }
