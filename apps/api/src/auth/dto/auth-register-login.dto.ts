@@ -6,6 +6,7 @@ import {
   IsOptional,
   Matches,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
@@ -45,4 +46,14 @@ export class AuthRegisterLoginDto {
     message: 'role must be customer or organizer',
   })
   role?: RoleEnum.customer | RoleEnum.organizer;
+
+  @ApiPropertyOptional({ example: 'Tech Event Co' })
+  @ValidateIf((o) => o.role === RoleEnum.organizer)
+  @IsNotEmpty({ message: 'companyName is required for organizers' })
+  companyName?: string;
+
+  @ApiPropertyOptional({ example: '0987654321' })
+  @ValidateIf((o) => o.role === RoleEnum.organizer)
+  @IsNotEmpty({ message: 'phoneNumber is required for organizers' })
+  phoneNumber?: string;
 }
