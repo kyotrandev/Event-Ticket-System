@@ -39,7 +39,7 @@ import { FindAllPromoCodesDto } from './dto/find-all-promo-codes.dto';
 
 @ApiTags('Promocodes')
 @Controller({
-  path: 'promo-codes',
+  path: ['promo-codes', 'admin/promo-codes'],
   version: '1',
 })
 export class PromoCodesController {

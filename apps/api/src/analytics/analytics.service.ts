@@ -63,10 +63,13 @@ export class AnalyticsService {
     }> = await this.dataSource.query(
       `SELECT bi."ticketTypeId",
               tt.name,
-              SUM(bi.quantity) as sold,
+              SUM(
+                CASE WHEN b.status = $2 THEN bi.quantity
+                     ELSE 0 END
+              ) as sold,
               COALESCE(SUM(
-                CASE WHEN b.status = $2 THEN bi.quantity * bi."unitPrice"
-                     WHEN b.status = $3 THEN -(bi.quantity * bi."unitPrice")
+                CASE WHEN b.status = $2 THEN ${this.allocatedItemRevenueSql()}
+                     WHEN b.status = $3 THEN -(${this.allocatedItemRevenueSql()})
                      ELSE 0 END
               ), 0) as revenue
        FROM booking_item bi
@@ -108,8 +111,8 @@ export class AnalyticsService {
         `SELECT DATE(b."createdAt")::text as date,
                 COUNT(DISTINCT b.id) as bookings,
                 COALESCE(SUM(
-                  CASE WHEN b.status = $2 THEN bi.quantity * bi."unitPrice"
-                       WHEN b.status = $3 THEN -(bi.quantity * bi."unitPrice")
+                  CASE WHEN b.status = $2 THEN ${this.allocatedItemRevenueSql()}
+                       WHEN b.status = $3 THEN -(${this.allocatedItemRevenueSql()})
                        ELSE 0 END
                 ), 0) as revenue
          FROM booking b
@@ -157,6 +160,16 @@ export class AnalyticsService {
       usageCount: Number(r.usage_count),
       totalDiscount: Number(r.total_discount),
     }));
+  }
+
+  private allocatedItemRevenueSql(): string {
+    return `CASE
+      WHEN b."subtotalAmount" > 0 THEN ROUND(
+        (b."totalAmount"::numeric * (bi.quantity * bi."unitPrice")::numeric)
+        / b."subtotalAmount"::numeric
+      )
+      ELSE 0
+    END`;
   }
 
   async getAdminStats(): Promise<AdminStatsDto> {
