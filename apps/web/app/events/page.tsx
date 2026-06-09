@@ -54,6 +54,15 @@ export default function EventsPage() {
     };
   }, [page, search]);
 
+  // Auto-search (debounced) when typing
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setPage(1);
+      setSearch({ keyword, category });
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [keyword, category]);
+
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
