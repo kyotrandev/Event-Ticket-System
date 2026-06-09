@@ -253,12 +253,17 @@ export class MailService {
 
   async waitlistNotified(mailData: {
     to: string;
-    data: { firstName: string; ticketTypeName: string; expiresAt: string };
+    data: {
+      firstName: string;
+      ticketTypeName: string;
+      expiresAt: string;
+      bookingUrl: string;
+    };
   }): Promise<void> {
     await this.mailerService.sendMail({
       to: mailData.to,
       subject: `A ticket you wanted is now available`,
-      text: `A ${mailData.data.ticketTypeName} ticket is available for you. Book before ${mailData.data.expiresAt}.`,
+      text: `A ${mailData.data.ticketTypeName} ticket is available for you. Book before ${mailData.data.expiresAt}: ${mailData.data.bookingUrl}`,
       templatePath: path.join(
         this.configService.getOrThrow('app.workingDirectory', { infer: true }),
         'src',
@@ -271,6 +276,7 @@ export class MailService {
         firstName: mailData.data.firstName,
         ticketTypeName: mailData.data.ticketTypeName,
         expiresAt: mailData.data.expiresAt,
+        bookingUrl: mailData.data.bookingUrl,
       },
     });
   }

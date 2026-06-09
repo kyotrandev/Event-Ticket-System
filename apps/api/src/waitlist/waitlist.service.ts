@@ -13,10 +13,13 @@ import { WaitlistEntry } from './domain/waitlist-entry';
 import { WaitlistEntryMapper } from './infrastructure/persistence/relational/mappers/waitlist-entry.mapper';
 import { WaitlistStatusEnum } from './waitlist-status.enum';
 import { TicketTypeEntity } from '../ticket-types/infrastructure/persistence/relational/entities/ticket-type.entity';
+import { TicketTypeStatusEnum } from '../ticket-types/ticket-type-status.enum';
 import { UserEntity } from '../users/infrastructure/persistence/relational/entities/user.entity';
 import { MailService } from '../mail/mail.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { JoinWaitlistDto } from './dto/join-waitlist.dto';
+import { ConfigService } from '@nestjs/config';
+import { AllConfigType } from '../config/config.type';
 
 export const WAITLIST_EXPIRY_QUEUE = 'waitlist-expiry';
 export const WAITLIST_NOTIFY_HOURS = 48;
@@ -29,6 +32,7 @@ export class WaitlistService {
     private readonly repo: WaitlistEntryRelationalRepository,
     private readonly mailService: MailService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly configService: ConfigService<AllConfigType>,
   ) {}
 
   async join(userId: string, dto: JoinWaitlistDto): Promise<WaitlistEntry> {
@@ -39,6 +43,11 @@ export class WaitlistService {
         loadEagerRelations: false,
       });
     if (!ticketType) throw new NotFoundException('Ticket type not found');
+    if (ticketType.status !== TicketTypeStatusEnum.SOLD_OUT) {
+      throw new ConflictException(
+        'Waitlist is only available for sold-out tickets',
+      );
+    }
 
     const existing = await this.repo.findActiveByUserAndTicketType(
       userId,
@@ -124,10 +133,19 @@ export class WaitlistService {
             firstName: user.firstName ?? 'there',
             ticketTypeName: ticketType?.name ?? 'ticket',
             expiresAt: expiresAt.toLocaleString(),
+            bookingUrl: this.buildBookingUrl(entry.eventId),
           },
         });
       }
     }
+  }
+
+  private buildBookingUrl(eventId: string): string {
+    const frontendDomain = this.configService.get('app.frontendDomain', {
+      infer: true,
+    });
+    const baseUrl = frontendDomain ?? 'http://localhost:3000';
+    return `${baseUrl.replace(/\/$/, '')}/events/${eventId}`;
   }
 
   /**
