@@ -52,8 +52,8 @@ export class EventsRelationalRepository implements EventRepository {
     };
 
     if (options.category) {
-      publishedWhere.category = options.category;
-      ongoingWhere.category = options.category;
+      publishedWhere.category = ILike(`%${options.category}%`) as any;
+      ongoingWhere.category = ILike(`%${options.category}%`) as any;
     }
 
     if (options.location) {
@@ -94,8 +94,8 @@ export class EventsRelationalRepository implements EventRepository {
         });
 
       if (options.category) {
-        qb.andWhere('event.category = :category', {
-          category: options.category,
+        qb.andWhere('event.category ILIKE :category', {
+          category: `%${options.category}%`,
         });
       }
       if (options.location) {
