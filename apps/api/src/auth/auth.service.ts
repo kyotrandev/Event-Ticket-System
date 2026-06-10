@@ -29,6 +29,8 @@ import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class AuthService {
@@ -38,6 +40,7 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService<AllConfigType>,
+    @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
@@ -57,6 +60,26 @@ export class AuthService {
           status: 'accountLocked',
         },
         message: 'Account is locked. Contact support.',
+      });
+    }
+
+    if (user.status?.id === StatusEnum.inactive) {
+      throw new ForbiddenException({
+        status: HttpStatus.FORBIDDEN,
+        errors: {
+          status: 'emailNotVerified',
+        },
+        message: 'Please verify your email address before logging in.',
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      throw new ForbiddenException({
+        status: HttpStatus.FORBIDDEN,
+        errors: {
+          status: 'emailNotVerified',
+        },
+        message: 'Please verify your email address before logging in.',
       });
     }
 
@@ -210,7 +233,6 @@ export class AuthService {
 
   async register(dto: AuthRegisterLoginDto): Promise<void> {
     const roleId = dto.role ?? RoleEnum.customer;
-    const isOrganizer = roleId === RoleEnum.organizer;
 
     const user = await this.usersService.create({
       ...dto,
@@ -219,32 +241,37 @@ export class AuthService {
         id: roleId,
       },
       status: {
-        id: isOrganizer ? StatusEnum.pending_approval : StatusEnum.active,
+        id: StatusEnum.inactive,
       },
+      companyName: dto.companyName,
+      phoneNumber: dto.phoneNumber,
     });
+    const hash = await this.jwtService.signAsync(
+      {
+        confirmEmailUserId: user.id,
+      },
+      {
+        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
+          infer: true,
+        }),
+        expiresIn: this.configService.getOrThrow('auth.confirmEmailExpires', {
+          infer: true,
+        }),
+      },
+    );
 
-    // Organizers get a pending-review notification; customers get email verification
-    if (!isOrganizer) {
-      const hash = await this.jwtService.signAsync(
-        {
-          confirmEmailUserId: user.id,
-        },
-        {
-          secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
-            infer: true,
-          }),
-          expiresIn: this.configService.getOrThrow('auth.confirmEmailExpires', {
-            infer: true,
-          }),
-        },
-      );
-
-      await this.mailService.userSignUp({
+    try {
+      await this.emailQueue.add('user-sign-up', {
         to: dto.email,
         data: {
           hash,
         },
       });
+    } catch (error) {
+      console.error(
+        'Failed to enqueue verification email during signup',
+        error,
+      );
     }
   }
 
@@ -279,21 +306,22 @@ export class AuthService {
       });
     }
 
-    // Already active (CUSTOMER, advisory verification) — idempotent success
-    if (user.status?.id === StatusEnum.active) {
-      return;
+    if (user.isEmailVerified) {
+      return; // Idempotent success
     }
 
-    if (user.status?.id !== StatusEnum.inactive) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        error: `notFound`,
-      });
-    }
+    user.isEmailVerified = true;
 
-    user.status = {
-      id: StatusEnum.active,
-    };
+    if (user.role?.id === RoleEnum.organizer) {
+      user.status = {
+        id: StatusEnum.pending_approval,
+      };
+      // Optionally enqueue an email to Admin notifying them of a new organizer to approve
+    } else {
+      user.status = {
+        id: StatusEnum.active,
+      };
+    }
 
     await this.usersService.update(user.id, user);
   }

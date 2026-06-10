@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, MapPin, Tag } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, ApiError, bookingApi } from '@/lib/api';
+import { api, ApiError, bookingApi, waitlistApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import type { EventModel, TicketType } from '@/lib/types';
 import { formatDateTime } from '@/components/event-card';
@@ -19,6 +19,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import dynamic from 'next/dynamic';
+
+const Map = dynamic(() => import('@/components/LocationPickerMap'), { 
+  ssr: false, 
+  loading: () => <div className="h-[200px] w-full bg-muted flex items-center justify-center animate-pulse rounded-md border">Loading map...</div> 
+});
 
 function formatVnd(amount: number): string {
   return amount === 0
@@ -31,6 +37,13 @@ function formatVnd(amount: number): string {
 
 function remaining(t: TicketType): number {
   return Math.max(0, t.totalQty - t.soldQty - t.reservedQty);
+}
+
+function formatLocalDateTime(value: string): string {
+  return new Date(value).toLocaleString('vi-VN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 export default function EventDetailPage({
@@ -98,6 +111,16 @@ export default function EventDetailPage({
     }
   }
 
+  async function handleJoinWaitlist(ticketTypeId: string) {
+    if (!user) { router.push('/login'); return; }
+    try {
+      await waitlistApi.join(ticketTypeId);
+      toast.success('Joined waitlist successfully!');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to join waitlist');
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12">
@@ -116,6 +139,16 @@ export default function EventDetailPage({
 
   const eventActive =
     event.status === 'published' || event.status === 'ongoing';
+
+  let locationAddress = event.location;
+  let locationPos: { lat: number; lng: number } | null = null;
+  try {
+    const parsed = JSON.parse(event.location);
+    if (parsed.address) locationAddress = parsed.address;
+    if (parsed.lat && parsed.lng) locationPos = { lat: parsed.lat, lng: parsed.lng };
+  } catch {
+    // raw string
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -157,10 +190,17 @@ export default function EventDetailPage({
           <CalendarDays className="size-4" />
           {formatDateTime(event.startTime)} — {formatDateTime(event.endTime)}
         </p>
-        <p className="flex items-center gap-2">
-          <MapPin className="size-4" />
-          {event.location}
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="flex items-center gap-2">
+            <MapPin className="size-4 shrink-0" />
+            <span className="line-clamp-2">{locationAddress}</span>
+          </p>
+          {locationPos && (
+            <div className="mt-2 rounded-md overflow-hidden border w-full max-w-md h-[200px]">
+              <Map position={locationPos} readOnly />
+            </div>
+          )}
+        </div>
       </div>
 
       {event.description && (
@@ -194,7 +234,7 @@ export default function EventDetailPage({
                           : closed
                             ? 'Sales closed'
                             : upcoming
-                              ? `Sales open ${new Date(t.saleStart).toLocaleDateString('vi-VN')}`
+                              ? `Sales open ${formatLocalDateTime(t.saleStart)}`
                               : `${left} remaining`}
                       </CardDescription>
                     </div>
@@ -263,6 +303,17 @@ export default function EventDetailPage({
                         </Button>
                       </div>
                     </div>
+                  </CardContent>
+                )}
+                {soldOut && eventActive && (
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => void handleJoinWaitlist(t.id)}
+                    >
+                      Join Waitlist
+                    </Button>
                   </CardContent>
                 )}
               </Card>

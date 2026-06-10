@@ -104,5 +104,48 @@ export class UserSeedService {
         }),
       );
     }
+    const countStaff = await this.repository.count({
+      where: {
+        role: {
+          id: RoleEnum.staff,
+        },
+      },
+    });
+
+    if (!countStaff) {
+      const salt = await bcrypt.genSalt();
+      const password = await bcrypt.hash('secret', salt);
+
+      await this.repository.save([
+        this.repository.create({
+          firstName: 'Alice',
+          lastName: 'Staff',
+          email: 'staff1@example.com',
+          password,
+          role: {
+            id: RoleEnum.staff,
+            name: 'Staff',
+          },
+          status: {
+            id: StatusEnum.active,
+            name: 'Active',
+          },
+        }),
+        this.repository.create({
+          firstName: 'Bob',
+          lastName: 'Staff',
+          email: 'staff2@example.com',
+          password,
+          role: {
+            id: RoleEnum.staff,
+            name: 'Staff',
+          },
+          status: {
+            id: StatusEnum.active,
+            name: 'Active',
+          },
+        }),
+      ]);
+    }
   }
 }

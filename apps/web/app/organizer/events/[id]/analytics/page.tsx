@@ -69,9 +69,14 @@ export default function EventAnalyticsPage({
   }
 
   const maxRevenue =
-    analytics ? Math.max(1, ...analytics.ticketTypeStats.map((t) => t.revenue)) : 1;
+    analytics
+      ? Math.max(1, ...analytics.ticketTypeStats.map((t) => Math.abs(t.revenue)))
+      : 1;
   const maxDailyBookings =
     analytics ? Math.max(1, ...analytics.dailyBookings.map((d) => d.bookings)) : 1;
+  const totalTicketsSold = analytics
+    ? analytics.ticketTypeStats.reduce((sum, t) => sum + t.sold, 0)
+    : 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
@@ -95,10 +100,7 @@ export default function EventAnalyticsPage({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <StatCard title="Total Revenue" value={fmtVnd(analytics.totalRevenue)} />
             <StatCard title="Check-in Rate" value={`${analytics.checkInRate}%`} />
-            <StatCard
-              title="Ticket Types Sold"
-              value={String(analytics.ticketTypeStats.length)}
-            />
+            <StatCard title="Tickets Sold" value={String(totalTicketsSold)} />
           </div>
 
           {/* Check-in progress bar */}
@@ -141,8 +143,12 @@ export default function EventAnalyticsPage({
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary/70 rounded-full"
-                          style={{ width: `${Math.round((tt.revenue / maxRevenue) * 100)}%` }}
+                          className={`h-full rounded-full ${
+                            tt.revenue < 0 ? 'bg-destructive/70' : 'bg-primary/70'
+                          }`}
+                          style={{
+                            width: `${Math.round((Math.abs(tt.revenue) / maxRevenue) * 100)}%`,
+                          }}
                         />
                       </div>
                     </div>

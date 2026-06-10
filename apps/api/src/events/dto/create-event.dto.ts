@@ -4,7 +4,6 @@ import {
   IsString,
   IsDateString,
   IsOptional,
-  IsUrl,
   IsInt,
   IsArray,
   Min,
@@ -48,7 +47,7 @@ export class CreateEventDto {
   endTime: string;
 
   @ApiPropertyOptional({ type: String })
-  @IsUrl()
+  @IsString()
   @IsOptional()
   bannerUrl?: string;
 

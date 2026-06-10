@@ -17,7 +17,10 @@
                 Hi {{firstName}},<br><br>
                 Great news — a <strong>{{ticketTypeName}}</strong> ticket you were waiting for is now available!<br><br>
                 <strong>Act fast:</strong> This spot is reserved for you until <strong>{{expiresAt}}</strong>.<br><br>
-                Log in and complete your booking before it expires.
+                <a href="{{bookingUrl}}" style="display:inline-block;padding:12px 18px;background:#111827;color:#ffffff;text-decoration:none;border-radius:6px">
+                    Book your ticket
+                </a><br><br>
+                Or open this link: <a href="{{bookingUrl}}">{{bookingUrl}}</a>
             </td>
         </tr>
     </table>

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { I18nContext } from 'nestjs-i18n';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { MailData } from './interfaces/mail-data.interface';
 
 import { MaybeType } from '../utils/types/maybe.type';
@@ -13,23 +13,22 @@ export class MailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService<AllConfigType>,
+    private readonly i18n: I18nService,
   ) {}
 
   async userSignUp(mailData: MailData<{ hash: string }>): Promise<void> {
-    const i18n = I18nContext.current();
-    let emailConfirmTitle: MaybeType<string>;
-    let text1: MaybeType<string>;
-    let text2: MaybeType<string>;
-    let text3: MaybeType<string>;
+    const i18nContext = I18nContext.current();
+    const lang =
+      i18nContext?.lang ||
+      this.configService.get('app.fallbackLanguage', { infer: true }) ||
+      'en';
 
-    if (i18n) {
-      [emailConfirmTitle, text1, text2, text3] = await Promise.all([
-        i18n.t('common.confirmEmail'),
-        i18n.t('confirm-email.text1'),
-        i18n.t('confirm-email.text2'),
-        i18n.t('confirm-email.text3'),
-      ]);
-    }
+    const [emailConfirmTitle, text1, text2, text3] = await Promise.all([
+      this.i18n.t('common.confirmEmail', { lang }),
+      this.i18n.t('confirm-email.text1', { lang }),
+      this.i18n.t('confirm-email.text2', { lang }),
+      this.i18n.t('confirm-email.text3', { lang }),
+    ]);
 
     const url = new URL(
       this.configService.getOrThrow('app.frontendDomain', {
@@ -254,12 +253,17 @@ export class MailService {
 
   async waitlistNotified(mailData: {
     to: string;
-    data: { firstName: string; ticketTypeName: string; expiresAt: string };
+    data: {
+      firstName: string;
+      ticketTypeName: string;
+      expiresAt: string;
+      bookingUrl: string;
+    };
   }): Promise<void> {
     await this.mailerService.sendMail({
       to: mailData.to,
       subject: `A ticket you wanted is now available`,
-      text: `A ${mailData.data.ticketTypeName} ticket is available for you. Book before ${mailData.data.expiresAt}.`,
+      text: `A ${mailData.data.ticketTypeName} ticket is available for you. Book before ${mailData.data.expiresAt}: ${mailData.data.bookingUrl}`,
       templatePath: path.join(
         this.configService.getOrThrow('app.workingDirectory', { infer: true }),
         'src',
@@ -272,6 +276,7 @@ export class MailService {
         firstName: mailData.data.firstName,
         ticketTypeName: mailData.data.ticketTypeName,
         expiresAt: mailData.data.expiresAt,
+        bookingUrl: mailData.data.bookingUrl,
       },
     });
   }
@@ -293,6 +298,46 @@ export class MailService {
       context: {
         app_name: this.configService.get('app.name', { infer: true }),
         firstName: mailData.data.firstName,
+      },
+    });
+  }
+
+  async staffInvitation(
+    mailData: MailData<{
+      hash: string;
+      tokenExpires: number;
+      eventName: string;
+      organizerName: string;
+    }>,
+  ): Promise<void> {
+    const url = new URL(
+      this.configService.getOrThrow('app.frontendDomain', {
+        infer: true,
+      }) + '/password-change',
+    );
+    url.searchParams.set('hash', mailData.data.hash);
+    url.searchParams.set('expires', mailData.data.tokenExpires.toString());
+
+    await this.mailerService.sendMail({
+      to: mailData.to,
+      subject: `You've been invited as a Staff member for ${mailData.data.eventName}`,
+      text: `${url.toString()} Click here to set your password and accept the invitation.`,
+      templatePath: path.join(
+        this.configService.getOrThrow('app.workingDirectory', {
+          infer: true,
+        }),
+        'src',
+        'mail',
+        'mail-templates',
+        'staff-invitation.hbs',
+      ),
+      context: {
+        title: 'Staff Invitation',
+        url: url.toString(),
+        actionTitle: 'Set your password',
+        app_name: this.configService.get('app.name', { infer: true }),
+        eventName: mailData.data.eventName,
+        organizerName: mailData.data.organizerName,
       },
     });
   }

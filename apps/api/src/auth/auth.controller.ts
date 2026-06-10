@@ -34,7 +34,7 @@ import { RefreshResponseDto } from './dto/refresh-response.dto';
 export class AuthController {
   constructor(private readonly service: AuthService) {}
 
-  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Throttle({ default: { ttl: 60000, limit: 50 } })
   @SerializeOptions({
     groups: ['me'],
   })
@@ -47,6 +47,7 @@ export class AuthController {
     return this.service.validateLogin(loginDto);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 50 } })
   @Post('email/register')
   @HttpCode(HttpStatus.NO_CONTENT)
   async register(@Body() createUserDto: AuthRegisterLoginDto): Promise<void> {
