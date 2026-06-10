@@ -56,6 +56,10 @@ export function LocationPicker({ value, onChange }: Props) {
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, []);
+
   const handleUpdate = (newAddress: string, newPos: {lat: number, lng: number} | null) => {
     setAddress(newAddress);
     setPosition(newPos);
