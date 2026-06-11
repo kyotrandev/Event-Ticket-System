@@ -74,18 +74,14 @@ export class AnalyticsService {
                 CASE WHEN b.status = $2 THEN bi.quantity
                      ELSE 0 END
               ) as sold,
-              COALESCE(SUM(
-                CASE WHEN b.status = $2 THEN ${this.allocatedItemRevenueSql()}
-                     WHEN b.status = $3 THEN -(${this.allocatedItemRevenueSql()})
-                     ELSE 0 END
-              ), 0) as revenue
+              COALESCE(SUM(${this.paidItemRevenueSql('$2')}), 0) as revenue
        FROM booking_item bi
        JOIN ticket_type tt ON tt.id = bi."ticketTypeId"
        JOIN booking b ON b.id = bi."bookingId"
        WHERE tt."eventId" = $1
-         AND b.status IN ($2, $3)
+         AND b.status = $2
        GROUP BY bi."ticketTypeId", tt.name`,
-      [eventId, BookingStatusEnum.PAID, BookingStatusEnum.REFUNDED],
+      [eventId, BookingStatusEnum.PAID],
     );
     return rows.map((r) => ({
       ticketTypeId: r.ticketTypeId,
@@ -117,19 +113,15 @@ export class AnalyticsService {
       await this.dataSource.query(
         `SELECT DATE(b."createdAt")::text as date,
                 COUNT(DISTINCT b.id) as bookings,
-                COALESCE(SUM(
-                  CASE WHEN b.status = $2 THEN ${this.allocatedItemRevenueSql()}
-                       WHEN b.status = $3 THEN -(${this.allocatedItemRevenueSql()})
-                       ELSE 0 END
-                ), 0) as revenue
+                COALESCE(SUM(${this.paidItemRevenueSql('$2')}), 0) as revenue
          FROM booking b
          JOIN booking_item bi ON bi."bookingId" = b.id
          JOIN ticket_type tt ON tt.id = bi."ticketTypeId"
          WHERE tt."eventId" = $1
-           AND b.status IN ($2, $3)
+           AND b.status = $2
          GROUP BY DATE(b."createdAt")
          ORDER BY DATE(b."createdAt")`,
-        [eventId, BookingStatusEnum.PAID, BookingStatusEnum.REFUNDED],
+        [eventId, BookingStatusEnum.PAID],
       );
     return rows.map((r) => ({
       date: r.date,
@@ -177,6 +169,11 @@ export class AnalyticsService {
       )
       ELSE 0
     END`;
+  }
+
+  /** Net revenue: only PAID bookings count. Refunded bookings are excluded (not subtracted). */
+  private paidItemRevenueSql(paidStatusParam: string): string {
+    return `CASE WHEN b.status = ${paidStatusParam} THEN ${this.allocatedItemRevenueSql()} ELSE 0 END`;
   }
 
   async getAdminStats(): Promise<AdminStatsDto> {
@@ -242,16 +239,14 @@ export class AnalyticsService {
         `SELECT DATE(b."createdAt")::text as date,
                 COUNT(DISTINCT b.id)::int as bookings,
                 COALESCE(SUM(
-                  CASE WHEN b.status = $1 THEN b."totalAmount"
-                       WHEN b.status = $2 THEN -b."totalAmount"
-                       ELSE 0 END
+                  CASE WHEN b.status = $1 THEN b."totalAmount" ELSE 0 END
                 ), 0)::bigint as revenue
          FROM booking b
          WHERE b."createdAt" >= NOW() - INTERVAL '30 days'
-           AND b.status IN ($1, $2)
+           AND b.status = $1
          GROUP BY DATE(b."createdAt")
          ORDER BY DATE(b."createdAt")`,
-        [BookingStatusEnum.PAID, BookingStatusEnum.REFUNDED],
+        [BookingStatusEnum.PAID],
       ) as Promise<Array<{ date: string; bookings: number; revenue: string }>>,
     ]);
 
@@ -314,18 +309,14 @@ export class AnalyticsService {
         [organizerId],
       ) as Promise<Array<{ status: string; count: number }>>,
       this.dataSource.query(
-        `SELECT COALESCE(SUM(
-           CASE WHEN b.status = $2 THEN ${this.allocatedItemRevenueSql()}
-                WHEN b.status = $3 THEN -(${this.allocatedItemRevenueSql()})
-                ELSE 0 END
-         ), 0) as revenue
+        `SELECT COALESCE(SUM(${this.paidItemRevenueSql('$2')}), 0) as revenue
          FROM booking b
          JOIN booking_item bi ON bi."bookingId" = b.id
          JOIN ticket_type tt ON tt.id = bi."ticketTypeId"
          JOIN event e ON e.id = tt."eventId"
          WHERE e."organizerId" = $1
-           AND b.status IN ($2, $3)`,
-        [organizerId, BookingStatusEnum.PAID, BookingStatusEnum.REFUNDED],
+           AND b.status = $2`,
+        [organizerId, BookingStatusEnum.PAID],
       ) as Promise<Array<{ revenue: string }>>,
       this.dataSource.query(
         `SELECT COALESCE(SUM(tt."soldQty"), 0)::int as sold
@@ -432,15 +423,11 @@ export class AnalyticsService {
        ) tts ON tts."eventId" = e.id
        LEFT JOIN (
          SELECT tt."eventId",
-                COALESCE(SUM(
-                  CASE WHEN b.status = '${BookingStatusEnum.PAID}' THEN ${this.allocatedItemRevenueSql()}
-                       WHEN b.status = '${BookingStatusEnum.REFUNDED}' THEN -(${this.allocatedItemRevenueSql()})
-                       ELSE 0 END
-                ), 0) as revenue
+                COALESCE(SUM(${this.paidItemRevenueSql(`'${BookingStatusEnum.PAID}'`)}), 0) as revenue
          FROM booking b
          JOIN booking_item bi ON bi."bookingId" = b.id
          JOIN ticket_type tt ON tt.id = bi."ticketTypeId"
-         WHERE b.status IN ('${BookingStatusEnum.PAID}', '${BookingStatusEnum.REFUNDED}')
+         WHERE b.status = '${BookingStatusEnum.PAID}'
          GROUP BY tt."eventId"
        ) rev ON rev."eventId" = e.id
        LEFT JOIN (
@@ -580,15 +567,11 @@ export class AnalyticsService {
        ) tts ON tts."eventId" = e.id
        LEFT JOIN (
          SELECT tt."eventId",
-                COALESCE(SUM(
-                  CASE WHEN b.status = '${BookingStatusEnum.PAID}' THEN ${this.allocatedItemRevenueSql()}
-                       WHEN b.status = '${BookingStatusEnum.REFUNDED}' THEN -(${this.allocatedItemRevenueSql()})
-                       ELSE 0 END
-                ), 0) as revenue
+                COALESCE(SUM(${this.paidItemRevenueSql(`'${BookingStatusEnum.PAID}'`)}), 0) as revenue
          FROM booking b
          JOIN booking_item bi ON bi."bookingId" = b.id
          JOIN ticket_type tt ON tt.id = bi."ticketTypeId"
-         WHERE b.status IN ('${BookingStatusEnum.PAID}', '${BookingStatusEnum.REFUNDED}')
+         WHERE b.status = '${BookingStatusEnum.PAID}'
          GROUP BY tt."eventId"
        ) rev ON rev."eventId" = e.id
        LEFT JOIN (
