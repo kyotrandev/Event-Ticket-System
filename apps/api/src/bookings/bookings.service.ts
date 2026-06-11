@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { DataSource, In } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 import Stripe from 'stripe';
 import { AllConfigType } from '../config/config.type';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -251,6 +251,8 @@ export class BookingsService {
    *
    * Customers are subject to the event cancellation window; organizers and
    * admins may cancel/refund at any time for bookings on their events.
+   *
+   * Refund is blocked when any ticket in the booking has been checked in (USED).
    */
   async cancel(
     bookingId: string,
@@ -318,6 +320,8 @@ export class BookingsService {
       }
     }
 
+    await this.assertNoCheckedInTickets(bookingId);
+
     const cancelledTicketTypeQty = await this.dataSource.transaction(
       async (manager) => {
         const bk = await manager
@@ -328,6 +332,8 @@ export class BookingsService {
         if (!bk || bk.status !== BookingStatusEnum.PAID) {
           return new Map<string, number>(); // concurrent cancel won
         }
+
+        await this.assertNoCheckedInTickets(bookingId, manager);
 
         const items = await manager.find(BookingItemEntity, {
           where: { bookingId },
@@ -465,6 +471,34 @@ export class BookingsService {
     } catch (err) {
       this.logger.warn(
         `cancellation email failed for booking ${bookingId}: ${String(err)}`,
+      );
+    }
+  }
+
+  private async countCheckedInTickets(
+    bookingId: string,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const repo = manager
+      ? manager.getRepository(TicketEntity)
+      : this.dataSource.getRepository(TicketEntity);
+
+    return repo
+      .createQueryBuilder('t')
+      .innerJoin(BookingItemEntity, 'bi', 'bi.id = t.bookingItemId')
+      .where('bi.bookingId = :bookingId', { bookingId })
+      .andWhere('t.status = :status', { status: TicketStatusEnum.USED })
+      .getCount();
+  }
+
+  private async assertNoCheckedInTickets(
+    bookingId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const checkedInCount = await this.countCheckedInTickets(bookingId, manager);
+    if (checkedInCount > 0) {
+      throw new ForbiddenException(
+        'Cannot refund this booking because at least one ticket has already been checked in.',
       );
     }
   }
@@ -825,6 +859,14 @@ export class BookingsService {
 
     for (const bk of bookings) {
       try {
+        const checkedInCount = await this.countCheckedInTickets(bk.id);
+        if (checkedInCount > 0) {
+          this.logger.warn(
+            `Skipping refund for booking ${bk.id}: ${checkedInCount} ticket(s) already checked in`,
+          );
+          continue;
+        }
+
         await this.dataSource.transaction(async (manager) => {
           const lockedBk = await manager
             .createQueryBuilder(BookingEntity, 'b')
@@ -832,6 +874,8 @@ export class BookingsService {
             .where('b.id = :id', { id: bk.id })
             .getOne();
           if (!lockedBk || lockedBk.status !== BookingStatusEnum.PAID) return;
+
+          await this.assertNoCheckedInTickets(bk.id, manager);
 
           const bkItems = await manager.find(BookingItemEntity, {
             where: { bookingId: bk.id },
