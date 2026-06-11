@@ -7,7 +7,7 @@ import { AllConfigType } from '../config/config.type';
 interface SendMailOptions {
   from?: string;
   to: string | string[];
-  subject: string;
+  subject?: string;
   html?: string;
   templatePath?: string;
   context?: Record<string, unknown>;
@@ -52,7 +52,7 @@ export class MailerService {
       body: JSON.stringify({
         from: mailOptions.from ?? this.defaultFrom,
         to,
-        subject: mailOptions.subject as string,
+        subject: mailOptions.subject ?? '',
         html,
       }),
     });
