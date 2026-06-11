@@ -7,7 +7,7 @@ import { AllConfigType } from '../config/config.type';
 interface SendMailOptions {
   from?: string;
   to: string | string[];
-  subject?: string;
+  subject?: unknown;
   html?: string;
   templatePath?: string;
   context?: Record<string, unknown>;
