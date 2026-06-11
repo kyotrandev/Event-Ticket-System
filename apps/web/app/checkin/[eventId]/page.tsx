@@ -11,8 +11,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
+import { Upload } from 'lucide-react';
 
 type Mode = 'qr' | 'manual';
+
+type TicketQrPayload = { c: string; s: string };
+
+function parseTicketQrPayload(data: string): TicketQrPayload | null {
+  try {
+    const parsed = JSON.parse(data) as TicketQrPayload;
+    if (parsed.c && parsed.s) return parsed;
+  } catch {
+    // not our QR format
+  }
+  return null;
+}
+
+function decodeQrFromImageData(imageData: ImageData): TicketQrPayload | null {
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (!code) return null;
+  return parseTicketQrPayload(code.data);
+}
 
 function ResultBanner({ result }: { result: CheckInResult }) {
   const isValid = result.status === 'VALID';
@@ -75,6 +94,7 @@ export default function CheckInPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef(false);
   const lastCodeRef = useRef<string | null>(null);
@@ -131,17 +151,10 @@ export default function CheckInPage() {
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
-    if (code && code.data !== lastCodeRef.current) {
-      lastCodeRef.current = code.data;
-      try {
-        const parsed = JSON.parse(code.data) as { c: string; s: string };
-        if (parsed.c && parsed.s) {
-          void handleScanResult(parsed);
-        }
-      } catch {
-        // not our QR format, ignore
-      }
+    const payload = decodeQrFromImageData(imageData);
+    if (payload && JSON.stringify(payload) !== lastCodeRef.current) {
+      lastCodeRef.current = JSON.stringify(payload);
+      void handleScanResult(payload);
     }
     requestAnimationFrame(() => scanLoopRef.current());
   }, [handleScanResult]);
@@ -177,6 +190,48 @@ export default function CheckInPage() {
     }
     return () => stopCamera();
   }, [mode, startCamera, stopCamera]);
+
+  const handleImageUpload = async (file: File) => {
+    setProcessing(true);
+    setError(null);
+    setResult(null);
+
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = objectUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        setError('Could not read image.');
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const payload = decodeQrFromImageData(
+        ctx.getImageData(0, 0, canvas.width, canvas.height),
+      );
+
+      if (!payload) {
+        setError('No valid ticket QR code found in the image.');
+        return;
+      }
+
+      await handleScanResult(payload);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Image scan failed');
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setProcessing(false);
+    }
+  };
 
   const handleManual = async () => {
     if (!manualCode.trim()) return;
@@ -269,6 +324,40 @@ export default function CheckInPage() {
               )}
               <p className="text-xs text-muted-foreground mt-2">
                 Point the camera at an attendee&apos;s QR code. Auto-scans continuously.
+              </p>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={processing}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleImageUpload(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={processing}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="size-4 mr-2" />
+                {processing ? 'Processing…' : 'Upload QR image'}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Upload a screenshot or photo of a ticket QR code to check in without the camera.
               </p>
             </CardContent>
           </Card>
