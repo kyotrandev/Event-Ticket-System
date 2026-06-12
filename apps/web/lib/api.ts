@@ -11,6 +11,14 @@ import type { LoginResponse, User } from './types';
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
+/** Socket.IO attaches to the HTTP server root, not the REST API prefix. */
+export function getWsBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL.replace(/\/$/, '');
+  }
+  return API_URL.replace(/\/api(\/v\d+)?\/?$/, '');
+}
+
 const TOKEN_KEY = 'ets.token';
 const REFRESH_KEY = 'ets.refreshToken';
 
@@ -218,6 +226,8 @@ import type {
   CheckInResult,
   CheckInLogEntry,
   WaitlistEntry,
+  AppNotification,
+  Paginated,
 } from './types';
 
 export const bookingApi = {
@@ -301,7 +311,7 @@ export const staffApi = {
     api.get<EventAttendee[]>(`/tickets/events/${eventId}/attendees`),
   getTicketDetails: (ticketId: string) =>
     api.get<TicketDetails>(`/tickets/${ticketId}/details`),
-  updateTicketStatus: (ticketId: string, status: string) => 
+  updateTicketStatus: (ticketId: string, status: string) =>
     api.patch(`/tickets/${ticketId}/status`, { status }),
 };
 
@@ -527,6 +537,9 @@ export const checkInApi = {
 
 // --- Notification endpoints ---
 export const notificationApi = {
-  findMine: () => api.get<any[]>('/notifications/me'),
+  findMine: () =>
+    api.get<Paginated<AppNotification>>('/notifications?limit=50'),
+  markAsRead: (id: string) =>
+    api.patch<AppNotification>(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch<void>('/notifications/read/all'),
 };

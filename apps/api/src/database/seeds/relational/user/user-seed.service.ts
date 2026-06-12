@@ -33,6 +33,7 @@ export class UserSeedService {
           lastName: 'Admin',
           email: 'admin@example.com',
           password,
+          isEmailVerified: true,
           role: {
             id: RoleEnum.admin,
             name: 'Admin',
@@ -63,6 +64,7 @@ export class UserSeedService {
           lastName: 'Doe',
           email: 'john.doe@example.com',
           password,
+          isEmailVerified: true,
           role: {
             id: RoleEnum.customer,
             name: 'Customer',
@@ -93,6 +95,7 @@ export class UserSeedService {
           lastName: 'Organizer',
           email: 'organizer@example.com',
           password,
+          isEmailVerified: true,
           role: {
             id: RoleEnum.organizer,
             name: 'Organizer',
@@ -122,6 +125,7 @@ export class UserSeedService {
           lastName: 'Staff',
           email: 'staff1@example.com',
           password,
+          isEmailVerified: true,
           role: {
             id: RoleEnum.staff,
             name: 'Staff',
@@ -136,6 +140,7 @@ export class UserSeedService {
           lastName: 'Staff',
           email: 'staff2@example.com',
           password,
+          isEmailVerified: true,
           role: {
             id: RoleEnum.staff,
             name: 'Staff',

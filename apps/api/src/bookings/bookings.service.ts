@@ -431,8 +431,18 @@ export class BookingsService {
     );
 
     // Side effects after commit — email goes to the customer, not the actor.
+    const ctx = await this.resolveEventContextForBooking(bookingId);
     await Promise.allSettled([
       this.sendCancellationEmail(bookingId, booking.customerId),
+      this.notificationsService.create({
+        userId: booking.customerId,
+        title: 'Booking refunded',
+        content: ctx
+          ? `Your booking for "${ctx.eventName}" was cancelled and refunded. Funds typically arrive within 5–10 business days.`
+          : 'Your booking was cancelled and refunded. Funds typically arrive within 5–10 business days.',
+        type: 'BOOKING_REFUNDED',
+        relatedEntityId: bookingId,
+      }),
       ...[...cancelledTicketTypeQty.entries()].map(([ticketTypeId, qty]) =>
         this.waitlistService.notifyNext(ticketTypeId, qty),
       ),
@@ -506,14 +516,45 @@ export class BookingsService {
   }
 
   /** Customer-initiated cancel while payment is still pending. */
+  private async resolveEventContextForBooking(
+    bookingId: string,
+  ): Promise<{
+    eventId: string;
+    eventName: string;
+    organizerId: string;
+  } | null> {
+    const item = await this.dataSource.getRepository(BookingItemEntity).findOne({
+      where: { bookingId },
+      relations: { ticketType: { event: true } },
+    });
+    const event = item?.ticketType?.event;
+    if (!event) return null;
+    return {
+      eventId: event.id,
+      eventName: event.name,
+      organizerId: event.organizerId,
+    };
+  }
+
   private async cancelPendingPayment(
     bookingId: string,
     userId: string,
     booking: Booking,
   ): Promise<void> {
     await this.removeExpiryJob(bookingId);
-    const expired = await this.expire(bookingId);
+    const expired = await this.expire(bookingId, { notifyReason: 'none' });
     if (!expired) return;
+
+    const ctx = await this.resolveEventContextForBooking(bookingId);
+    await this.notificationsService.create({
+      userId: booking.customerId,
+      title: 'Booking cancelled',
+      content: ctx
+        ? `Your unpaid reservation for "${ctx.eventName}" was cancelled. The held tickets have been released.`
+        : 'Your unpaid booking was cancelled and the held tickets have been released.',
+      type: 'BOOKING_CANCELLED',
+      relatedEntityId: bookingId,
+    });
 
     const items = booking.items ?? [];
     await this.auditLogsService.log({
@@ -548,7 +589,11 @@ export class BookingsService {
    * Expires a booking and releases held inventory (SPEC US-3.4).
    * Idempotent: only PENDING_PAYMENT bookings transition; re-runs no-op.
    */
-  async expire(bookingId: string): Promise<boolean> {
+  async expire(
+    bookingId: string,
+    options?: { notifyReason?: 'timeout' | 'none' },
+  ): Promise<boolean> {
+    let customerId: string | null = null;
     const expired = await this.dataSource.transaction(async (manager) => {
       const booking = await manager
         .createQueryBuilder(BookingEntity, 'b')
@@ -559,6 +604,7 @@ export class BookingsService {
       if (!booking || booking.status !== BookingStatusEnum.PENDING_PAYMENT) {
         return false;
       }
+      customerId = booking.customerId;
 
       const items = await manager.find(BookingItemEntity, {
         where: { bookingId },
@@ -595,6 +641,19 @@ export class BookingsService {
         entity: 'Booking',
         entityId: bookingId,
       });
+
+      if (options?.notifyReason !== 'none' && customerId) {
+        const ctx = await this.resolveEventContextForBooking(bookingId);
+        await this.notificationsService.create({
+          userId: customerId,
+          title: 'Booking expired',
+          content: ctx
+            ? `Your reservation for "${ctx.eventName}" expired because payment was not completed in time. Please book again if tickets are still available.`
+            : 'Your booking expired because payment was not completed in time.',
+          type: 'BOOKING_EXPIRED',
+          relatedEntityId: bookingId,
+        });
+      }
     }
     return expired;
   }
@@ -853,6 +912,11 @@ export class BookingsService {
    * Cancels all PAID bookings, refunds them via Stripe, and notifies customers.
    */
   async cancelEventBookings(eventId: string): Promise<void> {
+    const event = await this.dataSource
+      .getRepository(EventEntity)
+      .findOneBy({ id: eventId });
+    const eventName = event?.name ?? 'An event you booked';
+
     const items = await this.dataSource.getRepository(BookingItemEntity).find({
       where: { ticketType: { eventId } },
       relations: ['ticketType'],
@@ -942,11 +1006,10 @@ export class BookingsService {
         // Send realtime notification
         await this.notificationsService.create({
           userId: bk.customerId.toString(),
-          title: 'Event Cancelled',
-          content:
-            'An event you booked has been unexpectedly cancelled. Your refund is being processed.',
+          title: 'Event cancelled',
+          content: `"${eventName}" was cancelled by the organizer. Your booking has been refunded — funds typically arrive within 5–10 business days.`,
           type: 'EVENT_CANCELLED',
-          relatedEntityId: eventId,
+          relatedEntityId: bk.id,
         });
       } catch (err) {
         this.logger.error(

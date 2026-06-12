@@ -17,7 +17,7 @@ export class NotificationsService {
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     const user = new User();
-    user.id = createNotificationDto.userId;
+    user.id = Number(createNotificationDto.userId);
 
     const notification = await this.notificationRepository.create({
       user,
@@ -29,7 +29,7 @@ export class NotificationsService {
     });
 
     // We will emit the notification via Gateway later here
-    this.notificationsGateway.emitToUser(user.id as string, notification);
+    this.notificationsGateway.emitToUser(user.id.toString(), notification);
 
     return notification;
   }

@@ -422,3 +422,14 @@ export interface WaitlistEntry {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  isRead: boolean;
+  relatedEntityId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -7,6 +7,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { TicketsModule } from '../tickets/tickets.module';
 import { RelationalTicketTypePersistenceModule } from '../ticket-types/infrastructure/persistence/relational/relational-persistence.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RelationalTicketTypePersistenceModule } from '../ticket-types/infrastru
     AnalyticsModule,
     BookingsModule,
     TicketsModule,
+    NotificationsModule,
   ],
   controllers: [EventsController],
   providers: [EventsService],

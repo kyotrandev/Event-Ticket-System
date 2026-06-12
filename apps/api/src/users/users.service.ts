@@ -337,9 +337,9 @@ export class UsersService {
 
     await this.notificationsService.create({
       userId: id as string,
-      title: 'Account Approved',
+      title: 'Organizer account approved',
       content:
-        'Your organizer account has been approved by the admin. You can now start creating events.',
+        'Your organizer account has been approved. You can now create and publish events on EventTicket.',
       type: 'ORGANIZER_APPROVED',
       relatedEntityId: id as string,
     });
@@ -379,9 +379,9 @@ export class UsersService {
 
     await this.notificationsService.create({
       userId: id as string,
-      title: 'Account Rejected',
+      title: 'Organizer application declined',
       content:
-        'Your organizer account has been rejected. Please contact support for more details.',
+        'Your organizer application was not approved at this time. You can review your details and apply again, or contact support if you have questions.',
       type: 'ORGANIZER_REJECTED',
       relatedEntityId: id as string,
     });

@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -18,6 +19,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CheckInService {
+  private readonly logger = new Logger(CheckInService.name);
+
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly logRepo: CheckInLogRelationalRepository,
@@ -84,6 +87,14 @@ export class CheckInService {
           },
         );
 
+        void this.notifyCheckInParties(
+          ticket,
+          attendeeName,
+          ticketTypeName,
+        ).catch((err) =>
+          this.logger.error('check-in notification failed', err),
+        );
+
         return {
           status: 'VALID',
           attendeeName,
@@ -105,6 +116,33 @@ export class CheckInService {
       originalScannedAt: log.scannedAt,
       staffName,
     };
+  }
+
+  private async notifyCheckInParties(
+    ticket: TicketEntity,
+    attendeeName: string,
+    ticketTypeName: string,
+  ): Promise<void> {
+    const event = await this.dataSource
+      .getRepository(EventEntity)
+      .findOneBy({ id: ticket.eventId });
+    if (!event) return;
+
+    await this.notificationsService.create({
+      userId: ticket.customerId,
+      title: 'Checked in successfully',
+      content: `Your ${ticketTypeName} ticket was scanned at the entrance. Have a great time!`,
+      type: 'TICKET_CHECKED_IN',
+      relatedEntityId: ticket.code,
+    });
+
+    await this.notificationsService.create({
+      userId: event.organizerId,
+      title: 'Guest checked in',
+      content: `${attendeeName} (${ticketTypeName}) just checked in to "${event.name}".`,
+      type: 'CHECKIN_RECEIVED',
+      relatedEntityId: event.id,
+    });
   }
 
   async scan(

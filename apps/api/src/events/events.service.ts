@@ -19,6 +19,7 @@ import { infinityPagination } from '../utils/infinity-pagination';
 import { BookingsService } from '../bookings/bookings.service';
 import { TicketTypeRepository } from '../ticket-types/ticket-types.repository';
 import { TicketTypeStatusEnum } from '../ticket-types/ticket-type-status.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EventsService {
@@ -26,6 +27,7 @@ export class EventsService {
     private readonly eventRepository: EventRepository,
     private readonly bookingsService: BookingsService,
     private readonly ticketTypeRepository: TicketTypeRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(organizerId: string, dto: CreateEventDto): Promise<Event> {
@@ -211,6 +213,16 @@ export class EventsService {
     }
 
     const updatedEvent = await this.eventRepository.updateStatus(id, newStatus);
+
+    if (newStatus === EventStatusEnum.PUBLISHED) {
+      await this.notificationsService.create({
+        userId: event.organizerId,
+        title: 'Event is live',
+        content: `"${updatedEvent.name}" is now published. Customers can browse and purchase tickets.`,
+        type: 'EVENT_PUBLISHED',
+        relatedEntityId: id,
+      });
+    }
 
     // Trigger bulk refund if event is cancelled
     if (newStatus === EventStatusEnum.CANCELLED) {

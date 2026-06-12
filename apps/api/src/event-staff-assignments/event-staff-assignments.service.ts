@@ -20,6 +20,7 @@ import { RoleEnum } from '../roles/roles.enum';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { MailService } from '../mail/mail.service';
 import { AllConfigType } from '../config/config.type';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface StaffWithUser extends EventStaffAssignment {
   firstName: string | null;
@@ -36,6 +37,7 @@ export class EventStaffAssignmentsService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<AllConfigType>,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async loadEvent(eventId: string): Promise<EventEntity> {
@@ -54,6 +56,32 @@ export class EventStaffAssignmentsService {
     if (!isAdmin && String(event.organizerId) !== requesterId) {
       throw new ForbiddenException('Not the event owner');
     }
+  }
+
+  private async notifyStaffAssigned(
+    event: EventEntity,
+    staffId: string,
+  ): Promise<void> {
+    await this.notificationsService.create({
+      userId: staffId,
+      title: 'Assigned to event',
+      content: `You have been assigned to check in guests at "${event.name}" on ${event.startTime.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}.`,
+      type: 'STAFF_EVENT_ASSIGNED',
+      relatedEntityId: event.id,
+    });
+  }
+
+  private async notifyStaffRemoved(
+    event: EventEntity,
+    staffId: string,
+  ): Promise<void> {
+    await this.notificationsService.create({
+      userId: staffId,
+      title: 'Removed from event',
+      content: `You are no longer assigned to "${event.name}". Contact the organizer if you think this is a mistake.`,
+      type: 'STAFF_EVENT_REMOVED',
+      relatedEntityId: event.id,
+    });
   }
 
   async assign(
@@ -80,7 +108,9 @@ export class EventStaffAssignmentsService {
       throw new ConflictException('Staff already assigned to this event.');
     }
 
-    return this.repo.create({ eventId, staffId });
+    const assignment = await this.repo.create({ eventId, staffId });
+    await this.notifyStaffAssigned(event, staffId);
+    return assignment;
   }
 
   async remove(
@@ -92,6 +122,7 @@ export class EventStaffAssignmentsService {
     const event = await this.loadEvent(eventId);
     this.assertOwner(event, requesterId, isAdmin);
     await this.repo.remove(eventId, staffId);
+    await this.notifyStaffRemoved(event, staffId);
   }
 
   async listByEvent(
@@ -187,7 +218,12 @@ export class EventStaffAssignmentsService {
       if (existing) {
         throw new ConflictException('Staff is already assigned to this event.');
       }
-      return this.repo.create({ eventId, staffId: String(user.id) });
+      const assignment = await this.repo.create({
+        eventId,
+        staffId: String(user.id),
+      });
+      await this.notifyStaffAssigned(event, String(user.id));
+      return assignment;
     }
 
     // Create new staff user
@@ -241,7 +277,12 @@ export class EventStaffAssignmentsService {
       },
     });
 
-    return this.repo.create({ eventId, staffId: String(user.id) });
+    const assignment = await this.repo.create({
+      eventId,
+      staffId: String(user.id),
+    });
+    await this.notifyStaffAssigned(event, String(user.id));
+    return assignment;
   }
   async updateStaff(
     eventId: string,

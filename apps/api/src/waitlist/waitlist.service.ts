@@ -149,8 +149,8 @@ export class WaitlistService {
 
       await this.notificationsService.create({
         userId: String(userMap.get(entry.userId)?.id),
-        title: 'Waitlist Ticket Available!',
-        content: `A ${ticketType?.name ?? 'ticket'} is now available for you to book. You have ${WAITLIST_NOTIFY_HOURS} hours to complete your booking.`,
+        title: 'A ticket is available for you',
+        content: `Good news — ${ticketType?.name ?? 'a ticket'} for an event on your waitlist is now available. You have ${WAITLIST_NOTIFY_HOURS} hours to complete your booking before the spot goes to the next person.`,
         type: 'WAITLIST_AVAILABLE',
         relatedEntityId: entry.eventId,
       });
@@ -187,6 +187,20 @@ export class WaitlistService {
       entity: 'WaitlistEntry',
       entityId: entryId,
     });
+
+    const ticketType = await this.dataSource
+      .getRepository(TicketTypeEntity)
+      .findOne({ where: { id: entry.ticketTypeId }, relations: { event: true } });
+    await this.notificationsService.create({
+      userId: entry.userId,
+      title: 'Waitlist window expired',
+      content: ticketType?.event
+        ? `Your priority booking window for "${ticketType.event.name}" has expired. You can rejoin the waitlist if tickets become available again.`
+        : 'Your priority booking window has expired. You can rejoin the waitlist if tickets become available again.',
+      type: 'WAITLIST_EXPIRED',
+      relatedEntityId: entry.eventId,
+    });
+
     await this.notifyNext(entry.ticketTypeId, 1);
   }
 }

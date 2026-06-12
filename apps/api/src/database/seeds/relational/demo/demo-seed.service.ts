@@ -344,6 +344,7 @@ export class DemoSeedService {
             lastName: customerNames[i][1],
             email,
             password: demoPassword,
+            isEmailVerified: true,
             role: { id: RoleEnum.customer, name: 'Customer' },
             status: { id: StatusEnum.active, name: 'Active' },
           }),

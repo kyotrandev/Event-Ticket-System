@@ -73,7 +73,24 @@ export class NotificationsGateway
 
   // Helper method to emit notifications
   emitToUser(userId: string, notification: Notification) {
-    this.server.to(`user_${userId}`).emit('notification', notification);
+    if (!this.server) {
+      this.logger.warn(
+        `Cannot emit notification to user_${userId}: WebSocket server not ready`,
+      );
+      return;
+    }
+    const payload = {
+      id: notification.id,
+      title: notification.title,
+      content: notification.content,
+      type: notification.type,
+      isRead: notification.isRead,
+      relatedEntityId: notification.relatedEntityId ?? null,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+    };
+    this.server.to(`user_${userId}`).emit('notification', payload);
+    this.logger.debug(`Emitted notification to user_${userId}: ${notification.type}`);
   }
 
   // Helper method for event-wide broadcasts (like check-in counts)

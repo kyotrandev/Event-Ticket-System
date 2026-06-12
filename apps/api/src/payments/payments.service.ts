@@ -193,7 +193,17 @@ export class PaymentsService {
       case 'payment_intent.payment_failed': {
         const intent = event.data.object as unknown as PaymentIntentLike;
         this.logger.log(`payment_intent.payment_failed: pi=${intent.id}`);
-        await this.markFailed(intent.id);
+        const failed = await this.markFailed(intent.id);
+        if (failed) {
+          await this.notificationsService.create({
+            userId: failed.customerId,
+            title: 'Payment failed',
+            content:
+              'Your payment could not be processed. The ticket hold has been released — you can start a new booking if tickets are still available.',
+            type: 'PAYMENT_FAILED',
+            relatedEntityId: failed.bookingId,
+          });
+        }
         break;
       }
       case 'charge.refund.updated': {
@@ -327,6 +337,15 @@ export class PaymentsService {
             },
             manager,
           );
+          return {
+            paymentId: payment.id,
+            fulfilled: false,
+            autoRefunded: {
+              customerId: booking.customerId,
+              bookingId: booking.id,
+              amount: payment.amount,
+            },
+          };
         } else {
           // Non-expired status (failed, refunded, paid) or free booking —
           // record the late payment for audit only.
@@ -420,8 +439,8 @@ export class PaymentsService {
       // Notification for customer
       await this.notificationsService.create({
         userId: booking.customerId,
-        title: 'Payment Successful',
-        content: `Your payment of ${payment.amount} VND for booking ${booking.id} was successful.`,
+        title: 'Payment confirmed',
+        content: `Your payment of ${payment.amount.toLocaleString('vi-VN')}₫ was successful. Your tickets are ready — open My Tickets to view your QR codes.`,
         type: 'PAYMENT_SUCCESS',
         relatedEntityId: booking.id,
       });
@@ -450,13 +469,49 @@ export class PaymentsService {
       this.logger.log(
         `fulfill: ticket delivery queued for booking=${payment.bookingId}`,
       );
+      await this.notifyOrganizerNewSale(payment.bookingId, payment.amount);
+    }
+
+    if (result.autoRefunded) {
+      await this.notificationsService.create({
+        userId: result.autoRefunded.customerId,
+        title: 'Late payment refunded',
+        content: `Your payment of ${result.autoRefunded.amount.toLocaleString('vi-VN')}₫ arrived after the booking expired. The amount has been automatically refunded.`,
+        type: 'PAYMENT_AUTO_REFUNDED',
+        relatedEntityId: result.autoRefunded.bookingId,
+      });
     }
 
     return result.paymentId;
   }
 
+  private async notifyOrganizerNewSale(
+    bookingId: string,
+    amount: number,
+  ): Promise<void> {
+    const item = await this.dataSource
+      .getRepository(BookingItemEntity)
+      .findOne({
+        where: { bookingId },
+        relations: { ticketType: { event: true } },
+      });
+    const event = item?.ticketType?.event;
+    if (!event) return;
+
+    await this.notificationsService.create({
+      userId: event.organizerId,
+      title: 'New ticket sale',
+      content: `You received a paid booking for "${event.name}" (${amount.toLocaleString('vi-VN')}₫).`,
+      type: 'NEW_BOOKING_SALE',
+      relatedEntityId: bookingId,
+    });
+  }
+
   /** payment_intent.payment_failed → booking FAILED, hold released. */
-  private async markFailed(stripePaymentIntentId: string): Promise<void> {
+  private async markFailed(
+    stripePaymentIntentId: string,
+  ): Promise<{ customerId: string; bookingId: string } | null> {
+    let notifyTarget: { customerId: string; bookingId: string } | null = null;
     await this.dataSource.transaction(async (manager) => {
       const payment = await manager
         .createQueryBuilder(PaymentEntity, 'p')
@@ -512,7 +567,12 @@ export class PaymentsService {
         },
         manager,
       );
+      notifyTarget = {
+        customerId: booking.customerId,
+        bookingId: booking.id,
+      };
     });
+    return notifyTarget;
   }
 
   /** charge.refund.updated → persist refundId + refundedAt when confirmed. */
