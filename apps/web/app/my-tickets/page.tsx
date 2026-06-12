@@ -27,18 +27,18 @@ function QrImage({ code }: { code: string }) {
   const [src, setSrc] = useState<string | null>(null);
   const [err, setErr] = useState(false);
   const fetched = useRef(false);
+  const blobRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (fetched.current) return;
     fetched.current = true;
     ticketApi
       .getQrBlob(code)
-      .then(setSrc)
+      .then((url) => { blobRef.current = url; setSrc(url); })
       .catch(() => setErr(true));
     return () => {
-      if (src) URL.revokeObjectURL(src);
+      if (blobRef.current) URL.revokeObjectURL(blobRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
   if (err) return <p className="text-muted-foreground text-xs">QR unavailable</p>;
