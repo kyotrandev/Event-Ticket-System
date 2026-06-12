@@ -10,6 +10,94 @@ import { Input } from '@/components/ui/input';
 
 const PAGE_SIZE = 12;
 
+const PREDEFINED_CATEGORIES = [
+  'Music',
+  'Technology',
+  'Arts',
+  'Sports',
+  'Food & Drink',
+  'Business',
+  'Health & Wellness',
+  'Comedy',
+];
+
+function CategoryMultiSelect({
+  selected,
+  onChange,
+}: {
+  selected: string;
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedArray = selected ? selected.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const toggleCategory = (cat: string) => {
+    if (selectedArray.includes(cat)) {
+      onChange(selectedArray.filter(c => c !== cat).join(','));
+    } else {
+      onChange([...selectedArray, cat].join(','));
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.category-multi-select')) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative category-multi-select w-full">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-14 w-full items-center justify-between rounded-2xl border-2 border-border bg-background px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+      >
+        <span className={selectedArray.length === 0 ? "text-muted-foreground" : "text-foreground truncate font-medium"}>
+          {selectedArray.length === 0 
+            ? "Any Category" 
+            : `Categories (${selectedArray.length})`}
+        </span>
+        <svg className="h-5 w-5 text-muted-foreground shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-[calc(100%+8px)] left-0 w-full md:w-64 z-50 rounded-xl border bg-card p-2 shadow-xl animate-in fade-in zoom-in-95">
+          <div className="max-h-60 overflow-y-auto pr-1">
+            {PREDEFINED_CATEGORIES.map(cat => (
+              <label key={cat} className="flex items-center gap-3 px-2 py-2.5 hover:bg-muted/50 rounded-lg cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedArray.includes(cat)}
+                  onChange={() => toggleCategory(cat)}
+                  className="size-5 rounded border-border text-primary focus:ring-primary accent-primary"
+                />
+                <span className="text-base font-medium">{cat}</span>
+              </label>
+            ))}
+          </div>
+          {selectedArray.length > 0 && (
+            <div className="pt-2 mt-2 border-t px-2">
+              <button 
+                type="button" 
+                onClick={() => { onChange(''); setOpen(false); }}
+                className="w-full text-center text-sm font-semibold text-primary py-2 hover:bg-primary/10 rounded-md transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EventsPage() {
   const [events, setEvents] = useState<EventModel[]>([]);
   const [page, setPage] = useState(1);
@@ -105,12 +193,7 @@ export default function EventsPage() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
-          <Input
-            placeholder="Category (e.g. Music, Tech)"
-            className="h-14 text-lg rounded-2xl border-2 border-border focus-visible:ring-primary focus-visible:border-primary shadow-sm"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          />
+          <CategoryMultiSelect selected={category} onChange={setCategory} />
           
           <div className="relative">
             <select

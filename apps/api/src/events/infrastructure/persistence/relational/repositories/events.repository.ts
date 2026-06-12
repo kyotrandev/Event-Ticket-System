@@ -6,6 +6,7 @@ import {
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
+  In,
 } from 'typeorm';
 import { EventEntity } from '../entities/event.entity';
 import { TicketTypeEntity } from '../../../../../ticket-types/infrastructure/persistence/relational/entities/ticket-type.entity';
@@ -54,7 +55,10 @@ export class EventsRelationalRepository implements EventRepository {
       };
 
       if (options.category) {
-        statusWhere.category = ILike(`%${options.category}%`) as any;
+        const categories = options.category.split(',').map((c) => c.trim()).filter(Boolean);
+        if (categories.length > 0) {
+          statusWhere.category = In(categories) as any;
+        }
       }
       if (options.location) {
         statusWhere.location = ILike(`%${options.location}%`) as any;
@@ -85,9 +89,12 @@ export class EventsRelationalRepository implements EventRepository {
         });
 
       if (options.category) {
-        qb.andWhere('event.category ILIKE :category', {
-          category: `%${options.category}%`,
-        });
+        const categories = options.category.split(',').map((c) => c.trim()).filter(Boolean);
+        if (categories.length > 0) {
+          qb.andWhere('event.category IN (:...categories)', {
+            categories,
+          });
+        }
       }
       if (options.location) {
         qb.andWhere('event.location ILIKE :location', {
