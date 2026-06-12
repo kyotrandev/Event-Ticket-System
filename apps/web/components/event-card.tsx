@@ -47,9 +47,9 @@ export function EventCard({ event }: { event: EventModel }) {
   }
 
   return (
-    <Link href={`/events/${event.id}`} className="group block">
-      <Card className="h-full overflow-hidden pt-0 transition-transform duration-300 group-hover:-translate-y-2">
-        <div className="bg-muted aspect-video w-full overflow-hidden border-b-2 border-border">
+    <Link href={`/events/${event.id}`} className="group block h-full">
+      <Card className="h-full flex flex-col overflow-hidden pt-0 transition-transform duration-300 group-hover:-translate-y-2 border-b-4">
+        <div className="bg-muted aspect-video w-full overflow-hidden border-b-2 border-border shrink-0">
           {event.bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -63,7 +63,7 @@ export function EventCard({ event }: { event: EventModel }) {
             </div>
           )}
         </div>
-        <CardHeader>
+        <CardHeader className="flex-1">
           <div className="mb-2 flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className="rounded-full font-bold px-3">{event.category}</Badge>
             {(() => {

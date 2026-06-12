@@ -16,6 +16,13 @@ import { OrganizerCalendar } from '@/components/organizer/organizer-calendar';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -219,29 +226,52 @@ export default function OrganizerEventsPage() {
               className="h-12 pl-12 rounded-2xl border-2 font-medium text-base"
             />
           </div>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as EventQuery['status'])}
-            className="h-12 rounded-2xl border-2 border-border bg-background px-4 font-bold text-sm"
+          <Select 
+            value={status || 'all'} 
+            onValueChange={(val) => setStatus((val === 'all' ? '' : val) as EventQuery['status'])}
           >
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="published">Upcoming</option>
-            <option value="ongoing">Live now</option>
-            <option value="ended">Ended</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as EventQuery['sort'])}
-            className="h-12 rounded-2xl border-2 border-border bg-background px-4 font-bold text-sm"
+            <SelectTrigger className="!h-12 w-full sm:w-[160px] rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_rgba(17,24,39,1)] bg-white px-4 font-bold text-sm transition-all focus:translate-y-[4px] focus:translate-x-[4px] focus:shadow-none hover:bg-gray-50 dark:border-border dark:shadow-none">
+              <SelectValue placeholder="All statuses">
+                {status === 'draft' ? 'Draft' :
+                 status === 'published' ? 'Upcoming' :
+                 status === 'ongoing' ? 'Live now' :
+                 status === 'ended' ? 'Ended' :
+                 status === 'cancelled' ? 'Cancelled' :
+                 'All statuses'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Upcoming</SelectItem>
+              <SelectItem value="ongoing">Live now</SelectItem>
+              <SelectItem value="ended">Ended</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select 
+            value={sort} 
+            onValueChange={(val) => setSort(val as EventQuery['sort'])}
           >
-            <option value="createdAt">Newest</option>
-            <option value="startTime">Soonest</option>
-            <option value="revenue">Highest revenue</option>
-            <option value="sold">Best selling</option>
-            <option value="name">Name A-Z</option>
-          </select>
+            <SelectTrigger className="!h-12 w-full sm:w-[160px] rounded-2xl border-2 border-gray-900 shadow-[4px_4px_0px_rgba(17,24,39,1)] bg-white px-4 font-bold text-sm transition-all focus:translate-y-[4px] focus:translate-x-[4px] focus:shadow-none hover:bg-gray-50 dark:border-border dark:shadow-none">
+              <SelectValue placeholder="Newest">
+                {sort === 'createdAt' ? 'Newest' :
+                 sort === 'startTime' ? 'Soonest' :
+                 sort === 'revenue' ? 'Highest revenue' :
+                 sort === 'sold' ? 'Best selling' :
+                 sort === 'name' ? 'Name A-Z' :
+                 'Newest'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt">Newest</SelectItem>
+              <SelectItem value="startTime">Soonest</SelectItem>
+              <SelectItem value="revenue">Highest revenue</SelectItem>
+              <SelectItem value="sold">Best selling</SelectItem>
+              <SelectItem value="name">Name A-Z</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center justify-between gap-2">

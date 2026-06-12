@@ -116,7 +116,7 @@ export default function LoginPage() {
       {/* Right side: Image/Pattern */}
       <div className="hidden bg-zinc-950 lg:block relative overflow-hidden">
         <img 
-          src="https://images.unsplash.com/photo-1540039155733-d7696c981b6c?auto=format&fit=crop&q=80&w=2000" 
+          src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&q=80&w=2000" 
           alt="Concert crowd" 
           className="absolute inset-0 h-full w-full object-cover opacity-60"
         />

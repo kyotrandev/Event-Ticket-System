@@ -273,8 +273,8 @@ export default function BookingDetailPage({
         </div>
 
         {/* Actions sidebar */}
-        <div className="space-y-4">
-          <Card className="border-2 rounded-2xl sticky top-36">
+        <div className="space-y-4 sticky top-24 h-fit">
+          <Card className="border-2 rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base">Actions</CardTitle>
             </CardHeader>

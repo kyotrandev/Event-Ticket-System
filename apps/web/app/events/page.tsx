@@ -7,6 +7,13 @@ import type { EventModel, Paginated } from '@/lib/types';
 import { EventCard } from '@/components/event-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const PAGE_SIZE = 12;
 
@@ -54,7 +61,7 @@ function CategoryMultiSelect({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-14 w-full items-center justify-between rounded-2xl border-2 border-border bg-background px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+        className="flex h-14 w-full items-center justify-between rounded-2xl border-2 border-b-4 border-border bg-background px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm hover:bg-muted/50 transition-colors"
       >
         <span className={selectedArray.length === 0 ? "text-muted-foreground" : "text-foreground truncate font-medium"}>
           {selectedArray.length === 0 
@@ -184,7 +191,7 @@ export default function EventsPage() {
             placeholder="Search by name or description…"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="h-14 text-lg rounded-2xl border-2 border-border focus-visible:ring-primary focus-visible:border-primary shadow-sm flex-1"
+            className="!h-14 text-lg rounded-2xl border-2 border-b-4 border-border focus-visible:ring-2 focus-visible:ring-primary shadow-sm flex-1 w-full px-4 hover:bg-muted/50 transition-colors bg-background"
           />
           <Button type="submit" size="lg" className="h-14 text-lg rounded-2xl px-8 shadow-sm w-full sm:w-auto">
             <Search className="size-5 mr-2" />
@@ -195,35 +202,35 @@ export default function EventsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
           <CategoryMultiSelect selected={category} onChange={setCategory} />
           
-          <div className="relative">
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="flex h-14 w-full items-center justify-between rounded-2xl border-2 border-border bg-background px-3 py-2 text-lg ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 appearance-none shadow-sm"
-            >
-              <option value="">Any Status</option>
-              <option value="published">Upcoming</option>
-              <option value="ongoing">Live Now</option>
-              <option value="ended">Ended</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+          <Select value={status || "all"} onValueChange={(val) => setStatus(val === "all" ? "" : val)}>
+            <SelectTrigger className="!h-14 w-full text-lg rounded-2xl border-2 border-b-4 border-border shadow-sm bg-background px-4 py-2 hover:bg-muted/50 transition-colors focus:ring-2 focus:ring-primary focus:outline-none">
+              <SelectValue placeholder="Any Status">
+                {status === "published" ? "Upcoming" :
+                 status === "ongoing" ? "Live Now" :
+                 status === "ended" ? "Ended" :
+                 status === "cancelled" ? "Cancelled" :
+                 "Any Status"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any Status</SelectItem>
+              <SelectItem value="published">Upcoming</SelectItem>
+              <SelectItem value="ongoing">Live Now</SelectItem>
+              <SelectItem value="ended">Ended</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Input
             type="date"
-            className="h-14 text-lg rounded-2xl border-2 border-border focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+            className="!h-14 w-full text-lg rounded-2xl border-2 border-b-4 border-border focus-visible:ring-2 focus-visible:ring-primary shadow-sm px-4 hover:bg-muted/50 transition-colors bg-background"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             title="Events starting on or after this date"
           />
           <Input
             type="date"
-            className="h-14 text-lg rounded-2xl border-2 border-border focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+            className="!h-14 w-full text-lg rounded-2xl border-2 border-b-4 border-border focus-visible:ring-2 focus-visible:ring-primary shadow-sm px-4 hover:bg-muted/50 transition-colors bg-background"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             title="Events ending on or before this date"

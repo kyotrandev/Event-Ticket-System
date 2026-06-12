@@ -68,6 +68,14 @@ export function LocationPicker({ value, onChange }: Props) {
     }
   };
 
+  const handleManualCoordChange = (type: 'lat' | 'lng', val: string) => {
+    const num = parseFloat(val);
+    const newPos = position ? { ...position, [type]: isNaN(num) ? 0 : num } : { lat: 0, lng: 0, [type]: isNaN(num) ? 0 : num };
+    setPosition(newPos);
+    setSearchCenter(newPos);
+    onChange(JSON.stringify({ address, lat: newPos.lat, lng: newPos.lng }));
+  };
+
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     handleUpdate(val, position);
@@ -127,6 +135,7 @@ export function LocationPicker({ value, onChange }: Props) {
           <Input
             placeholder="Search or enter address name (e.g., Hanoi Opera House)"
             value={address}
+            className="rounded-2xl h-12 font-medium"
             onChange={handleAddressChange}
             onFocus={() => {
               if (suggestions.length > 0) setShowSuggestions(true);
@@ -157,19 +166,39 @@ export function LocationPicker({ value, onChange }: Props) {
             </div>
           )}
         </div>
-        <Button type="button" variant="secondary" onClick={handleSearch} disabled={isSearching || !address.trim()}>
+        <Button type="button" variant="secondary" className="h-12 rounded-2xl font-bold" onClick={handleSearch} disabled={isSearching || !address.trim()}>
           <Search className="w-4 h-4 mr-2" />
           Search
         </Button>
       </div>
-      <div className="rounded-md overflow-hidden border relative z-0">
+      <div className="rounded-2xl overflow-hidden border-2 border-border border-b-4 relative z-0">
         <Map position={position} searchCenter={searchCenter} onPositionChange={(pos) => handleUpdate(address, pos)} />
       </div>
-      {position && (
-        <p className="text-xs text-muted-foreground mt-2">
-          Selected coordinates: {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
-        </p>
-      )}
+      
+      <div className="grid grid-cols-2 gap-4 mt-2">
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Latitude</label>
+          <Input 
+            type="number" 
+            step="any"
+            placeholder="e.g. 10.7769"
+            value={position?.lat ?? ''} 
+            onChange={(e) => handleManualCoordChange('lat', e.target.value)}
+            className="h-12 rounded-2xl font-medium"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Longitude</label>
+          <Input 
+            type="number" 
+            step="any"
+            placeholder="e.g. 106.7009"
+            value={position?.lng ?? ''} 
+            onChange={(e) => handleManualCoordChange('lng', e.target.value)}
+            className="h-12 rounded-2xl font-medium"
+          />
+        </div>
+      </div>
     </div>
   );
 }

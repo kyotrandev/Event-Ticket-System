@@ -2,6 +2,12 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const LocationMap = dynamic(() => import('@/components/LocationPickerMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-[300px] bg-muted/40 animate-pulse rounded-2xl border-2 border-border" />
+});
 import {
   ExternalLink,
   Rocket,
@@ -165,15 +171,32 @@ export default function EventHubPage({
             <CardHeader>
               <CardTitle>Event details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm font-medium text-muted-foreground">
-              <p>
-                <span className="font-bold text-foreground">When: </span>
-                {fmtDateTime(event.startTime)} → {fmtDateTime(event.endTime)}
-              </p>
-              <p>
-                <span className="font-bold text-foreground">Where: </span>
-                {parseLocation(event.location)}
-              </p>
+            <CardContent className="space-y-4 text-sm font-medium text-muted-foreground">
+              <div className="space-y-2">
+                <p>
+                  <span className="font-bold text-foreground">When: </span>
+                  {fmtDateTime(event.startTime)} → {fmtDateTime(event.endTime)}
+                </p>
+                <p>
+                  <span className="font-bold text-foreground">Where: </span>
+                  {parseLocation(event.location)}
+                </p>
+              </div>
+
+              {event.location && (() => {
+                try {
+                  const loc = JSON.parse(event.location);
+                  if (typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+                    return (
+                      <div className="rounded-2xl overflow-hidden border-2 border-border border-b-4 w-full">
+                        <LocationMap position={{ lat: loc.lat, lng: loc.lng }} readOnly />
+                      </div>
+                    );
+                  }
+                } catch { return null; }
+                return null;
+              })()}
+
               {event.description && (
                 <p className="pt-2 text-foreground/80 whitespace-pre-wrap">
                   {event.description}
@@ -238,19 +261,37 @@ export default function EventHubPage({
           </div>
 
           {analytics && analytics.ticketTypeStats.length > 0 && (
-            <Card className="rounded-3xl border-2">
-              <CardHeader>
-                <CardTitle className="text-base">Sales by ticket type</CardTitle>
+            <Card className="rounded-3xl border-2 border-border shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+                <CardTitle className="text-lg font-extrabold flex items-center gap-2">
+                  <Ticket className="size-5 text-primary" />
+                  Sales by ticket type
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {analytics.ticketTypeStats.map((tt) => (
-                  <div key={tt.ticketTypeId} className="flex justify-between text-sm font-semibold">
-                    <span>{tt.name}</span>
-                    <span className="text-muted-foreground">
-                      {tt.sold} sold · {fmtVnd(tt.revenue)}
-                    </span>
-                  </div>
-                ))}
+              <CardContent className="p-0">
+                <div className="divide-y divide-border/50">
+                  {analytics.ticketTypeStats.map((tt) => (
+                    <div key={tt.ticketTypeId} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:px-6 hover:bg-muted/20 transition-colors gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="size-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-extrabold text-sm border border-primary/20 shrink-0">
+                          {tt.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-bold text-base">{tt.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm font-semibold bg-muted/30 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                        <div className="flex flex-col items-end min-w-[4rem]">
+                          <span className="text-muted-foreground uppercase tracking-widest text-[10px] font-extrabold mb-0.5">Sold</span>
+                          <span className="text-foreground">{tt.sold}</span>
+                        </div>
+                        <div className="h-8 w-px bg-border/80 hidden sm:block" />
+                        <div className="flex flex-col items-end min-w-[6rem]">
+                          <span className="text-muted-foreground uppercase tracking-widest text-[10px] font-extrabold mb-0.5">Revenue</span>
+                          <span className="text-primary font-bold">{fmtVnd(tt.revenue)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}

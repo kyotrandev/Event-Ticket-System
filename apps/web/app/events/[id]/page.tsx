@@ -250,11 +250,11 @@ export default function EventDetailPage({
                       <Label htmlFor={`qty-${t.id}`} className="shrink-0">
                         Qty
                       </Label>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-3">
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon"
+                          className="size-10 rounded-xl"
                           onClick={() =>
                             setQuantities((q) => ({
                               ...q,
@@ -284,12 +284,12 @@ export default function EventDetailPage({
                               ),
                             }))
                           }
-                          className="h-8 w-16 text-center"
+                          className="h-10 w-20 text-center text-lg font-bold !rounded-xl !shadow-sm border-2 border-b-4 border-border"
                         />
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon"
+                          className="size-10 rounded-xl"
                           onClick={() =>
                             setQuantities((q) => ({
                               ...q,
