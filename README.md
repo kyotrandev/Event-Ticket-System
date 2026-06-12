@@ -1,70 +1,91 @@
-# Event Ticket Management System
+# Hệ Thống Quản Lý Vé Sự Kiện
 
-Full-stack web application for the complete event ticketing lifecycle: creation → booking → payment → QR check-in.
+Ứng dụng web full-stack quản lý toàn bộ vòng đời đặt vé sự kiện: tạo sự kiện → đặt vé → thanh toán → check-in bằng QR code.
 
-## Features
+## Tính Năng Đã Hoàn Thành
 
-| Phase | Status |
+| Giai đoạn | Trạng thái |
 |---|---|
-| Authentication & User Management | ✅ Done (Phase 1) |
-| Event & Ticket Type Management | ✅ Done — API + web browse/detail (Phase 2) |
-| Booking & Payment (Stripe) | ✅ Done — API + booking/payment/my-tickets UI (Phase 3) |
-| QR Check-In System | ✅ Done — API + web scanner/logs UI (Phase 4) |
-| Cancellation, Refund & Waitlist | ✅ Done — cancel/refund API + waitlist queue + my-bookings UI (Phase 5, run migration to activate) |
-| Analytics & Admin Panel | ✅ Done — event analytics API + admin panel UI (Phase 6) |
-| Infrastructure & DevOps | ✅ Done — docker-compose, .env.example, CI/CD workflows (Phase 7) |
+| Xác thực & Quản lý người dùng | ✅ Hoàn thành (Phase 1) |
+| Quản lý sự kiện & loại vé | ✅ Hoàn thành — API + giao diện duyệt/chi tiết sự kiện (Phase 2) |
+| Đặt vé & Thanh toán (Stripe) | ✅ Hoàn thành — API + giao diện đặt vé/thanh toán/vé của tôi (Phase 3) |
+| Check-in bằng QR Code | ✅ Hoàn thành — API + giao diện quét mã/xem lịch sử (Phase 4) |
+| Hủy vé, Hoàn tiền & Danh sách chờ | ✅ Hoàn thành — API hủy/hoàn tiền + hàng đợi chờ + giao diện quản lý đặt vé (Phase 5) |
+| Thống kê & Bảng quản trị Admin | ✅ Hoàn thành — API thống kê sự kiện + giao diện admin panel (Phase 6) |
+| Hạ tầng & DevOps | ✅ Hoàn thành — docker-compose, .env.example, CI/CD workflows (Phase 7) |
 
-## Tech Stack
+## Công Nghệ Sử Dụng
 
-| Layer | Technology |
+| Tầng | Công nghệ |
 |---|---|
 | Backend | Nest.js + TypeORM + PostgreSQL |
-| Frontend | Next.js 16 + Shadcn/UI + Tailwind CSS |
-| Queue | Redis + BullMQ |
-| Payment | Stripe (VND, test mode) |
-| Storage | Cloudinary |
-| Auth | JWT (access 15m / refresh 7d) + Google OAuth 2.0 |
+| Frontend | Next.js 15 + Shadcn/UI + Tailwind CSS |
+| Hàng đợi | Redis + BullMQ |
+| Thanh toán | Stripe (VND, chế độ test) |
+| Lưu trữ file | Cloudinary |
+| Xác thực | JWT (access 15 phút / refresh 7 ngày) + Google OAuth 2.0 |
 | Email | MailDev (dev) / Resend (prod) |
-| Deploy | Docker + GitHub Actions |
+| Triển khai | Docker + GitHub Actions |
 
-## Quick Start
+---
 
-### Prerequisites
+## Hướng Dẫn Chạy Dự Án
 
-- Docker Desktop running
-- Node.js 20+
-- npm 9+
+### Yêu Cầu Cài Đặt
 
-### Option A — Docker (recommended)
+- **Docker Desktop** đang chạy
+- **Node.js** phiên bản 20 trở lên
+- **npm** phiên bản 9 trở lên
+
+---
+
+### Cách A — Docker (Khuyến nghị, đơn giản nhất)
+
+> Chạy toàn bộ hệ thống chỉ với vài lệnh. Không cần cài Node.js hay cấu hình database thủ công.
+
+**Bước 1:** Clone dự án và sao chép file cấu hình môi trường
 
 ```bash
 git clone <repo-url>
 cd event-ticket-system
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-# edit both files: set AUTH_JWT_SECRET, AUTH_REFRESH_SECRET, Stripe keys
-docker compose up
 ```
 
-All services start automatically. Migrations and seeds run on first boot.
+**Bước 2:** Khởi động toàn bộ hệ thống
 
-### Option B — Local dev (without Docker)
+```bash
+docker compose up --build
+```
 
-#### 1. Configure
+Hệ thống sẽ tự động:
+- Khởi động PostgreSQL, Redis, MailDev
+- Chạy migration tạo bảng database
+- Seed dữ liệu mẫu (tài khoản test, sự kiện mẫu)
+- Khởi động API và Web
+
+**Bước 3:** Mở trình duyệt tại http://localhost:3000
+
+---
+
+### Cách B — Chạy Thủ Công (không dùng Docker cho API/Web)
+
+Dùng khi muốn chỉnh sửa code và thấy thay đổi ngay lập tức.
+
+#### 1. Sao chép file cấu hình
 
 ```bash
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-# edit apps/api/.env: AUTH_JWT_SECRET, AUTH_REFRESH_SECRET, Stripe keys
 ```
 
-#### 2. Start infrastructure
+#### 2. Khởi động hạ tầng (PostgreSQL, Redis, MailDev)
 
 ```bash
 docker compose up -d postgres redis maildev
 ```
 
-#### 3. Run API
+#### 3. Chạy Backend API
 
 ```bash
 cd apps/api
@@ -74,7 +95,7 @@ npm run seed:run:relational
 npm run start:dev
 ```
 
-#### 4. Run Web (new terminal)
+#### 4. Chạy Frontend Web (mở terminal mới)
 
 ```bash
 cd apps/web
@@ -82,53 +103,100 @@ npm install
 npm run dev
 ```
 
-## URLs (local dev)
+---
 
-| Service | URL | Notes |
+## Địa Chỉ Truy Cập
+
+| Dịch vụ | URL | Ghi chú |
 |---|---|---|
-| API (Swagger) | http://localhost:4000/docs | Auto-generated |
-| Web App | http://localhost:3000 | |
-| MailDev | http://localhost:1080 | Catch all outgoing emails |
+| Web App | http://localhost:3000 | Giao diện chính |
+| API (Swagger) | http://localhost:4000/docs | Tài liệu API tự động |
+| MailDev | http://localhost:1080 | Xem email gửi ra (đăng ký, xác nhận...) |
+| Adminer (DB UI) | http://localhost:8080 | Quản lý database trực quan |
 
-## Project Structure
+---
+
+## Tài Khoản Test
+
+Tất cả tài khoản đã được xác thực email, sẵn sàng đăng nhập ngay.
+
+| Vai trò | Email | Mật khẩu | Ghi chú |
+|---|---|---|---|
+| Admin | `admin@example.com` | `secret` | Toàn quyền quản trị hệ thống |
+| Khách hàng | `john.doe@example.com` | `secret` | Đặt vé, thanh toán |
+| Organizer | `organizer@example.com` | `secret` | Tạo & quản lý sự kiện |
+| Staff | `staff1@example.com` | `secret` | Alice — quét QR check-in |
+| Staff | `staff2@example.com` | `secret` | Bob — thiết bị quét thứ 2 |
+
+**Thẻ Stripe test:** `4242 4242 4242 4242` · hạn dùng bất kỳ ngày nào trong tương lai · CVV bất kỳ
+
+> **Lưu ý đăng ký tài khoản mới:** Tài khoản mới tạo qua `/register` cần xác nhận email trước khi đăng nhập. Email xác nhận sẽ hiện trong **MailDev tại http://localhost:1080** (không gửi ra hộp thư thật).
+
+---
+
+## Luồng Demo Cơ Bản
+
+### Luồng Khách Hàng Đặt Vé
+1. Đăng nhập tài khoản `john.doe@example.com`
+2. Vào trang chủ → chọn sự kiện → nhấn **Book**
+3. Chọn số lượng vé → xác nhận đặt
+4. Thanh toán bằng thẻ test: `4242 4242 4242 4242`
+5. Vào **My Tickets** (`/my-tickets`) để xem QR code
+
+### Luồng Check-in
+1. Đăng nhập tài khoản `staff1@example.com`
+2. Vào `/checkin/[eventId]` → camera mở
+3. Quét QR code từ trang **My Tickets** của khách hàng
+
+### Luồng Organizer
+1. Đăng nhập tài khoản `organizer@example.com`
+2. Vào `/organizer/events` → xem/tạo/chỉnh sửa sự kiện
+3. Vào `/organizer/events/[id]/analytics` → xem thống kê doanh thu
+
+---
+
+## Cấu Trúc Dự Án
 
 ```
 event-ticket-system/
 ├── apps/
-│   ├── api/          — Nest.js backend (brocoders/nestjs-boilerplate base)
-│   │   ├── src/
-│   │   │   ├── auth*/        — JWT + Google/Apple/Facebook OAuth
-│   │   │   ├── users/        — User management
-│   │   │   ├── roles/        — Role-based access control
-│   │   │   ├── session/      — Refresh token sessions
-│   │   │   ├── files/        — File upload (local/S3/Cloudinary)
-│   │   │   ├── mail/         — Email templates
-│   │   │   └── database/     — Migrations, seeds
-│   │   └── test/
-│   └── web/          — Next.js 16 frontend (App Router)
-│       ├── app/
-│       ├── components/
-│       └── lib/
+│   ├── api/          — Backend Nest.js (kiến trúc Hexagonal)
+│   │   └── src/
+│   │       ├── auth/         — JWT + Google OAuth
+│   │       ├── users/        — Quản lý người dùng
+│   │       ├── events/       — Sự kiện
+│   │       ├── tickets/      — Loại vé & vé
+│   │       ├── bookings/     — Đặt vé & thanh toán Stripe
+│   │       ├── check-in/     — Quét QR, xác thực vé
+│   │       ├── waitlist/     — Danh sách chờ
+│   │       └── database/     — Migrations, seeds
+│   └── web/          — Frontend Next.js 15 (App Router)
+│       ├── app/              — Các trang
+│       ├── components/       — UI components
+│       └── lib/              — API client, utilities
 ├── docs/
-│   ├── SPEC.md       — Product specification & acceptance criteria
-│   ├── SETUP.md      — Detailed setup & troubleshooting
-│   ├── ARCHITECTURE.md — System architecture overview
-│   └── CONTRIBUTING.md — Development workflow & conventions
-├── AGENTS.md         — AI agent guide
+│   ├── SPEC.md               — Đặc tả sản phẩm & tiêu chí nghiệm thu
+│   ├── SETUP.md              — Hướng dẫn cài đặt chi tiết & xử lý lỗi
+│   ├── ARCHITECTURE.md       — Kiến trúc hệ thống
+│   ├── TECH_STACK.md         — Chi tiết công nghệ sử dụng
+│   └── DEMO.md               — Hướng dẫn demo & test các tính năng
 └── docker-compose.yaml
 ```
 
-## Documentation
+---
 
-| Doc | Description |
+## Tài Liệu Tham Khảo
+
+| Tài liệu | Nội dung |
 |---|---|
-| [docs/SPEC.md](docs/SPEC.md) | Product spec — user stories, acceptance criteria, API surface |
-| [docs/SETUP.md](docs/SETUP.md) | Setup guide — prerequisites, install steps, troubleshooting |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture — modules, DB schema, auth flow, queue design |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contributing — branching, commits, PR flow, code generation |
-| [docs/DEMO.md](docs/DEMO.md) | Demo guide — test accounts, UI pages, end-to-end test flows |
-| [AGENTS.md](AGENTS.md) | AI agent guide — patterns, conventions for AI-assisted development |
+| [docs/SPEC.md](docs/SPEC.md) | Đặc tả sản phẩm — user stories, tiêu chí nghiệm thu, API surface |
+| [docs/SETUP.md](docs/SETUP.md) | Hướng dẫn cài đặt chi tiết — prerequisites, các bước cài, xử lý lỗi |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Kiến trúc — các module, schema DB, luồng xác thực, thiết kế queue |
+| [docs/TECH_STACK.md](docs/TECH_STACK.md) | Công nghệ — chi tiết framework, thư viện, design patterns |
+| [docs/DEMO.md](docs/DEMO.md) | Demo — tài khoản test, danh sách trang UI, luồng test end-to-end |
 
-## Team
+---
 
-KMA — CNPM Project, HK2 2025–2026.
+## Nhóm Thực Hiện
+
+KMA — Đồ án môn Công nghệ Phần mềm, Học kỳ 2 năm học 2025–2026.
