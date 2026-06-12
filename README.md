@@ -1,18 +1,6 @@
-# Hệ Thống Quản Lý Vé Sự Kiện
+# Hướng dẫn sử dụng Hệ Thống Quản Lý Vé Sự Kiện
 
 Ứng dụng web full-stack quản lý toàn bộ vòng đời đặt vé sự kiện: tạo sự kiện → đặt vé → thanh toán → check-in bằng QR code.
-
-## Tính Năng Đã Hoàn Thành
-
-| Giai đoạn | Trạng thái |
-|---|---|
-| Xác thực & Quản lý người dùng | ✅ Hoàn thành (Phase 1) |
-| Quản lý sự kiện & loại vé | ✅ Hoàn thành — API + giao diện duyệt/chi tiết sự kiện (Phase 2) |
-| Đặt vé & Thanh toán (Stripe) | ✅ Hoàn thành — API + giao diện đặt vé/thanh toán/vé của tôi (Phase 3) |
-| Check-in bằng QR Code | ✅ Hoàn thành — API + giao diện quét mã/xem lịch sử (Phase 4) |
-| Hủy vé, Hoàn tiền & Danh sách chờ | ✅ Hoàn thành — API hủy/hoàn tiền + hàng đợi chờ + giao diện quản lý đặt vé (Phase 5) |
-| Thống kê & Bảng quản trị Admin | ✅ Hoàn thành — API thống kê sự kiện + giao diện admin panel (Phase 6) |
-| Hạ tầng & DevOps | ✅ Hoàn thành — docker-compose, .env.example, CI/CD workflows (Phase 7) |
 
 ## Công Nghệ Sử Dụng
 
@@ -199,4 +187,4 @@ event-ticket-system/
 
 ## Nhóm Thực Hiện
 
-KMA — Đồ án môn Công nghệ Phần mềm, Học kỳ 2 năm học 2025–2026.
+KMA — Dự án môn Tốt nghiệp 2(Công nghệ Phần mềm), Học kỳ 2 năm học 2025–2026.
