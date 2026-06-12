@@ -56,6 +56,12 @@ export class NotificationsController {
     );
   }
 
+  @Patch('read/all')
+  @ApiOkResponse({ description: 'Mark all as read' })
+  markAllAsRead(@Request() req) {
+    return this.notificationsService.markAllAsRead(String(req.user.id));
+  }
+
   @Patch(':id/read')
   @ApiParam({
     name: 'id',

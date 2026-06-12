@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Popover } from '@base-ui/react/popover';
 import { useSocket } from '../providers/notification-provider';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api';
+import { notificationApi } from '@/lib/api';
 
 export function NotificationBell() {
   const { isConnected } = useSocket();
@@ -21,9 +21,13 @@ export function NotificationBell() {
     // In a real implementation, you would fetch from your /api/v1/notifications endpoint here
     const fetchNotifications = async () => {
       try {
-        // const data = await api.get('/notifications/me');
-        // setNotifications(data);
-        // setUnreadCount(data.filter((n: any) => !n.isRead).length);
+        const data = await notificationApi.findMine();
+        // Since API returns paginated structure from infinity pagination, we assume it's data.data
+        // Wait, did we implement infinity pagination for notifications?
+        // Let's check what the API returns. Let's just do `const notifs = Array.isArray(data) ? data : (data as any).data;`
+        const notifs = Array.isArray(data) ? data : ((data as any)?.data || []);
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter((n: any) => !n.isRead).length);
       } catch (err) {
         console.error('Failed to fetch notifications', err);
       }
@@ -44,10 +48,14 @@ export function NotificationBell() {
     return () => window.removeEventListener('new_notification', handleNewNotification);
   }, []);
 
-  const markAllAsRead = () => {
-    // In a real app, call API to mark as read
-    setUnreadCount(0);
-    setNotifications((prev) => prev.map(n => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await notificationApi.markAllAsRead();
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
+    }
   };
 
   return (

@@ -48,6 +48,10 @@ export class NotificationsService {
     return updated;
   }
 
+  async markAllAsRead(userId: string): Promise<void> {
+    await this.notificationRepository.markAllAsRead(userId);
+  }
+
   emitToEvent(eventId: string, eventName: string, data: any) {
     this.notificationsGateway.emitToEvent(eventId, eventName, data);
   }

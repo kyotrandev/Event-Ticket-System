@@ -99,4 +99,11 @@ export class NotificationRelationalRepository implements NotificationRepository 
   async remove(id: Notification['id']): Promise<void> {
     await this.notificationRepository.delete(id);
   }
+
+  async markAllAsRead(userId: User['id']): Promise<void> {
+    await this.notificationRepository.update(
+      { user: { id: Number(userId) }, isRead: false },
+      { isRead: true }
+    );
+  }
 }

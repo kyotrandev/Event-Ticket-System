@@ -31,5 +31,7 @@ export abstract class NotificationRepository {
     payload: DeepPartial<Notification>,
   ): Promise<Notification | null>;
 
+  abstract markAllAsRead(userId: User['id']): Promise<void>;
+
   abstract remove(id: Notification['id']): Promise<void>;
 }

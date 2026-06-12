@@ -524,3 +524,9 @@ export const checkInApi = {
   getLogs: (eventId: string) =>
     api.get<CheckInLogEntry[]>(`/checkin/logs/${eventId}`),
 };
+
+// --- Notification endpoints ---
+export const notificationApi = {
+  findMine: () => api.get<any[]>('/notifications/me'),
+  markAllAsRead: () => api.patch<void>('/notifications/read/all'),
+};
